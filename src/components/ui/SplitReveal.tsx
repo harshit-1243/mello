@@ -37,7 +37,8 @@ export function SplitReveal({
     let io: IntersectionObserver | null = null;
     const ctx = gsap.context(() => {
       const inners = el.querySelectorAll("[data-word-inner]");
-      gsap.set(inners, { yPercent: 118 });
+      // opacity:1 overrides the CSS guard; yPercent clips the word below the mask.
+      gsap.set(inners, { yPercent: 118, opacity: 1 });
 
       io = new IntersectionObserver(
         (entries) => {

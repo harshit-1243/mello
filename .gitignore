@@ -42,3 +42,4 @@ next-env.d.ts
 
 # dev-only screenshot artifacts (see scripts/shot.mjs)
 /scripts/shots/
+/scripts/*.log

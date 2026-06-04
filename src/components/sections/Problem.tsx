@@ -9,18 +9,21 @@ const losses = [
   {
     icon: PhoneMissed,
     label: "Peak-hour calls → voicemail",
+    sub: "Your busiest slots are exactly when staff can’t get to the phone.",
     tone: "danger" as const,
     n: "01",
   },
   {
     icon: Clock,
     label: "₹15K+/mo for a desk that sleeps",
+    sub: "A receptionist is the front desk’s biggest cost — and still clocks out at night.",
     tone: "ink" as const,
     n: "02",
   },
   {
     icon: Phone,
     label: "After-hours calls answered: 0 → ∞",
+    sub: "Every call after closing used to be a dead end. Now it books itself.",
     tone: "green" as const,
     n: "03",
   },
@@ -86,6 +89,9 @@ export function Problem() {
                 </div>
                 <p className="mt-6 text-lg font-medium leading-snug text-ink text-balance">
                   {l.label}
+                </p>
+                <p className="mt-2.5 text-[0.95rem] leading-relaxed text-ink-muted">
+                  {l.sub}
                 </p>
               </div>
             );

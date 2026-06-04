@@ -54,7 +54,7 @@ export function SocialProof() {
               key={i}
               className="flex flex-col justify-between rounded-4xl border border-line bg-paper-raised p-7 shadow-soft sm:p-8"
             >
-              <blockquote className="text-[1.3rem] font-medium leading-snug text-ink text-balance">
+              <blockquote className="text-[1.55rem] font-medium leading-snug text-ink text-balance sm:text-[1.75rem]">
                 <span className="mr-1 font-display text-green">&ldquo;</span>
                 {q.quote}
                 <span className="ml-0.5 font-display text-green">&rdquo;</span>

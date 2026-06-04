@@ -191,9 +191,11 @@
 .anim [data-hero-hide] {
   opacity: 0;
 }
-/* Split-text headings: pre-hide each word's inner line before GSAP reveals it. */
+/* Split-text headings: pre-hide each word before GSAP reveals it. Uses opacity
+   (NOT transform) so it never collides with GSAP's transform management — a
+   transform guard here gets read as a base offset and leaves the word stuck. */
 .anim [data-word-inner] {
-  transform: translateY(118%);
+  opacity: 0;
 }
 
 /* ------------------------------------------------------------------ *
