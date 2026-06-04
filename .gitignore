@@ -43,3 +43,9 @@ next-env.d.ts
 # dev-only screenshot artifacts (see scripts/shot.mjs)
 /scripts/shots/
 /scripts/*.log
+
+# local-only editor config + ad-hoc diagnostic scripts
+.claude/settings.local.json
+/scripts/diag2.mjs
+/scripts/shotmotion.mjs
+/main
