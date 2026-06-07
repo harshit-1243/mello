@@ -56,6 +56,10 @@ export const env = {
   SARVAM_TTS_MODEL: (optional("SARVAM_TTS_MODEL") ?? "bulbul:v2") as "bulbul:v2" | "bulbul:v3",
   SARVAM_TTS_SPEAKER: optional("SARVAM_TTS_SPEAKER") ?? "anushka",
 
+  // Speak a short filler ("Let me check…") the instant the caller finishes, to
+  // mask the brain's think time so there's no dead air. Phone calls only.
+  VOICE_FILLER: (optional("VOICE_FILLER") ?? "true") === "true",
+
   // Facility whose config.json + system-prompt.md to load. Defaults to the
   // demo facility, resolved relative to the package (agent/facilities/...).
   FACILITY_DIR: optional("FACILITY_DIR"),

@@ -83,6 +83,38 @@ export class BookingEngine {
     };
   }
 
+  /**
+   * Combined slot check for THIS caller in ONE call: court availability +
+   * member-only window + T-30 release + group conflict, plus alternative times
+   * that are themselves fully bookable. Collapsing these into one tool call
+   * (instead of separate check_availability + check_group + re-checks) roughly
+   * halves the LLM round-trips on a booking turn → big latency win.
+   */
+  checkSlot(
+    args: {
+      sport: string;
+      date: string;
+      start_time: string;
+      duration_minutes?: number;
+      basketball_mode?: "full" | "half";
+    },
+    ctx: CallerContext,
+  ): AvailabilityResult {
+    const sport = this.findSport(args.sport);
+    if (!sport) return { available: false, alternative_times: [] };
+
+    const dur = args.duration_minutes ?? this.config.slot_rules.default_duration_minutes;
+    const start = toMinutes(args.start_time);
+
+    if (this.isBookable(sport, args.date, start, dur, ctx, args.basketball_mode)) {
+      return { available: true, alternative_times: [] };
+    }
+    return {
+      available: false,
+      alternative_times: this.bookableAlternatives(sport, args.date, start, dur, ctx, args.basketball_mode),
+    };
+  }
+
   // --- Group conflict ------------------------------------------------------
 
   checkGroup(args: { phone: string; sport: string; date: string; start_time: string }): {
@@ -214,6 +246,47 @@ export class BookingEngine {
     const dayOffset = daysBetween(ctx.today, date);
     const minutesUntilStart = dayOffset * 1440 + start - ctx.nowMinutes;
     return minutesUntilStart > releaseMin; // still locked until T-30
+  }
+
+  /** Fully bookable for THIS caller: open + not member-locked + a free court + no group conflict. */
+  private isBookable(
+    sport: Sport,
+    date: string,
+    start: number,
+    dur: number,
+    ctx: CallerContext,
+    mode?: "full" | "half",
+  ): boolean {
+    if (!this.withinOpenHours(start, dur)) return false;
+    if (this.isMemberLocked(date, start, ctx)) return false;
+    if (this.freeCourts(sport, date, start, dur, mode).length === 0) return false;
+    const { conflict } = this.checkGroup({
+      phone: ctx.callerPhone,
+      sport: sport.id,
+      date,
+      start_time: toHHMM(start),
+    });
+    return !conflict;
+  }
+
+  /** Up to 2 alternative start times (same sport, same day) that are fully bookable for this caller. */
+  private bookableAlternatives(
+    sport: Sport,
+    date: string,
+    start: number,
+    dur: number,
+    ctx: CallerContext,
+    mode?: "full" | "half",
+  ): string[] {
+    const out: string[] = [];
+    for (const offset of [60, 120, 180, -60, 240, -120]) {
+      const alt = start + offset;
+      if (this.isBookable(sport, date, alt, dur, ctx, mode)) {
+        out.push(toHHMM(alt));
+        if (out.length === 2) break;
+      }
+    }
+    return out;
   }
 
   /** Up to 2 alternative start times (same sport, same day) that are bookable. */

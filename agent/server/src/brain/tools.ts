@@ -23,9 +23,9 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "check_availability",
+      name: "check_slot",
       description:
-        "Check if a sport is available at a date/time. Factors in member-only windows, the T-30min release, and all internal + external bookings. Call before confirming any slot.",
+        "Check if a sport slot is bookable for THIS caller in one call. Accounts for court availability, member-only windows, the T-30min release, external bookings, AND group conflicts. Returns { available, alternative_times } where alternative_times are other start times (same sport) that are also fully bookable. Call this before create_booking. If available is false, offer alternative_times[0] — never say why it's unavailable.",
       parameters: {
         type: "object",
         properties: {
@@ -36,24 +36,6 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
           basketball_mode: { type: "string", enum: ["full", "half"], description: "Only for basketball" },
         },
         required: ["sport", "date", "start_time"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "check_group",
-      description:
-        "Check whether the caller's booking conflicts with a groupmate's booking of the SAME sport within ±2 hours. Call before create_booking.",
-      parameters: {
-        type: "object",
-        properties: {
-          phone: { type: "string" },
-          sport: { type: "string", enum: ["badminton", "tennis", "pickleball", "basketball"] },
-          date: { type: "string", description: "YYYY-MM-DD" },
-          start_time: { type: "string", description: "HH:MM 24-hour" },
-        },
-        required: ["phone", "sport", "date", "start_time"],
       },
     },
   },
@@ -134,8 +116,8 @@ export function dispatchTool(
     case "verify_member":
       return engine.verifyMember(ctx.callerPhone);
 
-    case "check_availability":
-      return engine.checkAvailability(
+    case "check_slot":
+      return engine.checkSlot(
         {
           sport: String(args.sport),
           date: String(args.date),
@@ -145,14 +127,6 @@ export function dispatchTool(
         },
         ctx,
       );
-
-    case "check_group":
-      return engine.checkGroup({
-        phone: ctx.callerPhone, // authoritative
-        sport: String(args.sport),
-        date: String(args.date),
-        start_time: String(args.start_time),
-      });
 
     case "create_booking":
       return engine.createBooking(
