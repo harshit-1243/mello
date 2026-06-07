@@ -185,8 +185,8 @@ If any group member books sport X at time T, no other group member can book spor
 
 1. ✅ Marketing website (shipped)
 2. ✅ Agent config + system prompt for Raheja Ileseum (user-approved v2)
-3. ⏳ **NEXT — Twilio webhook handler** ("agent picks up the phone and says hello")
-4. ⏳ Sarvam STT integration (transcribe caller audio)
+3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). Verified: `/voice/incoming` returns TwiML "Hello, can you hear me? This is Mello." and logs the call. Twilio creds are placeholders in `.env.local` (KYC + auth still pending).
+4. ⏳ **NEXT — Sarvam STT integration** (transcribe caller audio)
 5. ⏳ OpenAI brain wired to the system prompt + tool calls
 6. ⏳ Sarvam TTS (speak back to caller)
 7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
@@ -202,10 +202,15 @@ If any group member books sport X at time T, no other group member can book spor
 - `send_payment_link(phone, amount, booking_id)` → `{ link_sent }`
 - `escalate_to_human(reason, callback_phone)` → `{ scheduled }`
 
-### Recommended hosting (proposed but not committed)
-- Voice agent backend: **Railway** (~₹400/mo, long-running Node server for Twilio webhooks)
-- Marketing site: **Vercel** (already there)
-- DB: **Supabase** (Postgres + auth + row-level security built in — good for per-facility isolation)
+### Hosting plan (DECIDED)
+- **Demo stage = laptop + ngrok (free).** Run `agent/server` locally, expose with
+  `ngrok http 8080`, point Twilio's webhook at the ngrok URL. Full real-time
+  capability, zero hosting bill. Use this for the client demo.
+- **After demo succeeds → Railway** (~₹400/mo, always-on). Same server, no rewrite.
+- **Vercel is OFF the table for the voice backend** — confirmed again with user.
+  Serverless can't hold the persistent WebSocket needed for real-time Sarvam
+  STT/TTS streaming (Steps 4–6). Vercel stays for the marketing site only.
+- DB: **Supabase** (Postgres + auth + row-level security — good for per-facility isolation)
 
 ---
 
@@ -272,23 +277,25 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 3: Twilio webhook handler.**
+**Step 4: Sarvam STT integration.**
 
-A small Node.js server (TypeScript) that:
-1. Exposes a webhook URL Twilio calls when a phone number rings
-2. Responds with TwiML that has the AI say *"Hello, can you hear me? This is Mello."*
-3. Logs the call to the console
-4. Hangs up
+Step 3 is done — `agent/server/` (Fastify + TS) answers Twilio with a TwiML hello
+and logs the call. Verified locally via curl. Stack chosen: Fastify + TypeScript +
+`twilio` SDK + `tsx`/`tsc`. Server boots without Twilio creds (logs a warning).
 
-Goal: prove the phone-to-server path works before plugging in Sarvam STT/TTS.
+Goal of Step 4: get the caller's speech transcribed. This means moving from a
+one-shot TwiML `<Say>` to **Twilio Media Streams** — a WebSocket that streams the
+caller's audio to our server, which we forward to **Sarvam STT**. This is the
+step where the persistent-server requirement kicks in (why Vercel is out).
 
-### What to ask the user before writing code
-1. **Twilio credentials** — Account SID + Auth Token. They're at `console.twilio.com` → Account → "Account SID" and "Auth Token" buttons. Tell them to copy both. (Treat as secrets — store in `.env.local`, never commit.)
-2. **Phone number status** — did Indian KYC clear? If not, recommend buying a temporary US number (~$1/mo, no KYC) so we can build and demo. We swap to the Indian number once KYC clears.
-3. **Backend language confirmation** — propose TypeScript on Node.js (their codebase is already TS). They haven't rejected this.
-4. **Hosting confirmation** — propose Railway (~₹400/mo). They haven't picked yet.
+### Still pending from the user (not blocking the build)
+- **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.
+- **Phone number** — Indian KYC not cleared. For the demo, a temp US number (~$1/mo, no KYC) works; swap later.
+- **Sarvam API key** — needed for Step 4. Ask for it before wiring STT.
 
-Then announce: *"I'm about to write `agent/server/index.ts` — a Fastify (or Express) endpoint at `/voice/incoming` that returns TwiML reading a hello message."* And go.
+### Decisions locked this session
+- Backend = TypeScript on Node (Fastify). ✅
+- Hosting = laptop + ngrok for the demo (free), Railway after. Vercel NOT for voice. ✅
 
 ---
 

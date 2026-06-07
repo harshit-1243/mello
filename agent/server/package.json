@@ -1,0 +1,27 @@
+{
+  "name": "@mello/voice-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mello voice agent backend — Twilio webhooks, STT/TTS, booking brain.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "twilio": "^5.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}

@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/agent/server/node_modules
+/agent/server/dist
 /.pnp
 .pnp.*
 .yarn/*
