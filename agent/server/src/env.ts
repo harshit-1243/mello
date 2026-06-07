@@ -1,4 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+
+// Load .env.local first (developer secrets), then .env as a fallback. dotenv
+// does not override already-set vars, so .env.local wins, and real process env
+// (e.g. Railway dashboard vars) wins over both.
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 /**
  * Returns a trimmed env var, or undefined if missing/blank.
