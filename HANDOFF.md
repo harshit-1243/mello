@@ -189,8 +189,8 @@ If any group member books sport X at time T, no other group member can book spor
 3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). `/voice/incoming` greets then opens a Media Stream. Twilio creds are placeholders in `.env.local` (KYC + auth pending).
 4. ✅ **Sarvam STT integration** — `/voice/stream` WebSocket receives Twilio media (μ-law 8kHz), converts to PCM (`src/audio/mulaw.ts`), forwards to Sarvam streaming STT (`src/voice/sttBridge.ts`), logs transcripts. Auto-detect language for code-switching. Verified locally with a simulated media stream (frames received + counted; μ-law decode matches G.711 reference). **Needs `SARVAM_API_KEY` in `.env.local` to actually transcribe** — boots & counts frames without it.
 5. ✅ **Sarvam LLM brain** — `src/brain/agent.ts` runs the Sarvam chat loop (`sarvam-105b`) with `system-prompt.md` as system message + the 6 tools (`src/brain/tools.ts`). Booking-rules engine `src/booking/engine.ts` implements availability, member-only windows + T-30 release, group ±2h conflict, court assignment — seeded from `config.json`. **14/14 rule checks pass** (deterministic, no key needed). Caller phone passed via Stream `<Parameter>` so tools can't be spoofed. **LIVE-VERIFIED** against the real Sarvam API: group-conflict scenario handled perfectly (offered alt time same sport, no leak). Key is in `.env.local`.
-6. ⏳ **NEXT — Sarvam TTS** (speak the brain's reply back to caller)
-7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
+6. ✅ **Sarvam TTS** — `src/voice/ttsBridge.ts`. Brain reply → Sarvam streaming TTS (`bulbul:v2`, speaker `anushka`) configured to output **μ-law @ 8kHz directly** (Twilio's native format — zero conversion/resampling). Audio re-chunked to 160-byte frames and streamed back over the same WS as outbound `media`. Greeting moved from placeholder `<Say>` to TTS. **Verified end-to-end locally**: simulated Twilio call → greeting synthesized & 165 media frames (~3.3s) streamed back. Full loop (STT→brain→TTS) complete. Only the real phone leg is untested (needs Twilio number).
+7. ⏳ **NEXT — Supabase DB** seeded from `config.json` (members, groups, bookings, audit log)
 8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
 9. ⏳ WhatsApp confirmation via Meta sandbox (Razorpay link or "pay at venue" message)
 10. ⏳ Basic facility dashboard (login, see calls/transcripts/bookings, delete button)
@@ -278,23 +278,29 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 6: Sarvam TTS (speak the reply back).**
+**Step 7: Supabase DB (persistence + audit log).**
 
-Steps 3–5 are done. `agent/server/` (Fastify + TS): Twilio call → greet →
-`<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM → Sarvam STT → transcript →
-**Sarvam LLM brain (`sarvam-105b`) + tools → reply text (logged)**. Booking rules
-engine verified 14/14.
+Steps 3–6 are done. The FULL voice loop works: Twilio call → `<Connect><Stream>`
+→ `/voice/stream` WS → μ-law→PCM → Sarvam STT → **Sarvam LLM brain + tools** →
+reply → **Sarvam TTS (μ-law 8kHz) → streamed back to caller**. Verified
+end-to-end locally (simulated Twilio call); rules engine 14/14; brain live-tested.
 
-Goal of Step 6: take the brain's reply text (currently just logged in
-`twilioStream.ts` where it says `// Step 6: send reply to Sarvam TTS`), run it
-through **Sarvam streaming TTS**, and stream the resulting audio BACK to Twilio
-over the same media-stream WebSocket. Twilio expects outbound `media` events
-with base64 **μ-law 8kHz** — so we'll need the reverse of `mulaw.ts` (PCM→μ-law)
-since Sarvam TTS returns PCM/WAV. Use `<Connect><Stream>` bidirectionally (it's
-already bidirectional). Also: move the opening greeting from the placeholder
-`<Say>` to TTS so the membership-aware greeting is what the caller hears.
-Architecture note: handle barge-in later; for the demo, simple turn-taking via
-END_SPEECH is fine. Same `SARVAM_API_KEY` covers TTS.
+Goal of Step 7: replace the in-memory `BookingEngine` store (seeded from
+`config.json`) with **Supabase (Postgres)**. Keep the SAME rule logic — only the
+data access changes. Tables: facilities, members, groups (+ membership),
+bookings, external_bookings, call_logs, transcripts, audit_log. Per-facility
+row-level isolation (decision #2/#3). Seed from `config.json`. Also start the
+privacy plumbing (Step 8): audit every internal read, transcript 90-day TTL,
+audio destroyed in 60s. NOTE: an `escalate_to_human`/`send_payment_link` are
+still stubs — fine until Steps 9–10. Needs **Supabase project URL + anon/service
+keys** from the user.
+
+### Demo readiness note
+The agent is fully functional NOW via laptop + ngrok — the ONLY blocker to a live
+phone demo is a **Twilio number** (KYC pending; a temp US number works). Once a
+number exists: `ngrok http 8080`, point the number's voice webhook at
+`https://<ngrok>/voice/incoming`, and call it. STT on real speech + Twilio
+playing the audio are the only things not yet exercised (no real call made yet).
 
 ### Still pending from the user (not blocking the build)
 - **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.

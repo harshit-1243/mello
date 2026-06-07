@@ -93,3 +93,11 @@ a reply (logged as `🤖 Mello: ...`). Step 6 will speak that reply via TTS.
 Same `SARVAM_API_KEY` powers STT **and** the brain. Caller identity (phone) is
 passed from the call webhook into the media stream as a `<Parameter>`, so tools
 like `verify_member` / `check_group` use the real caller — the model can't spoof it.
+
+## Voice out (Step 6)
+
+The brain's reply → **Sarvam streaming TTS** ([src/voice/ttsBridge.ts](src/voice/ttsBridge.ts),
+`bulbul:v2`, speaker `anushka`) configured to emit **μ-law @ 8 kHz** — Twilio's
+native format, so no conversion. Audio is re-chunked into 160-byte (20ms) frames
+and streamed back over the same WebSocket as outbound `media`. The greeting is
+spoken via TTS too. Full duplex loop: caller speech → STT → brain → TTS → caller.

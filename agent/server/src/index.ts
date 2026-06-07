@@ -85,12 +85,14 @@ app.post(
     request.log.info({ from, to, callSid }, "Incoming call");
 
     const twiml = new twilio.twiml.VoiceResponse();
-    // Placeholder audible greeting — Sarvam TTS + the membership-aware greeting
-    // replace this in Step 6.
-    twiml.say(
-      { voice: "Polly.Aditi", language: "en-IN" },
-      "Hello, can you hear me? This is Mello.",
-    );
+    // Mello greets via Sarvam TTS over the media stream. Only fall back to a
+    // <Say> if Sarvam isn't configured (otherwise the call would be silent).
+    if (!sarvamConfigured) {
+      twiml.say(
+        { voice: "Polly.Aditi", language: "en-IN" },
+        "Hello, this is Mello. The voice service is not configured yet.",
+      );
+    }
     // <Connect><Stream> keeps the call open and streams the caller's audio to
     // our /voice/stream WebSocket until they hang up. We pass the caller's
     // number + call SID as Stream <Parameter>s so the brain knows who's calling

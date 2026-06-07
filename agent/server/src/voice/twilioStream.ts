@@ -1,7 +1,11 @@
 import type { WebSocket } from "ws";
 import type { FastifyBaseLogger } from "fastify";
 import { SttBridge } from "./sttBridge.js";
+import { TtsBridge } from "./ttsBridge.js";
 import { CallAgent } from "../brain/agent.js";
+
+/** Twilio outbound media frame size: 20ms of 8kHz μ-law = 160 bytes. */
+const OUT_FRAME_BYTES = 160;
 
 /**
  * Twilio Media Streams protocol messages we care about.
@@ -35,11 +39,23 @@ type TwilioMessage =
  */
 export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): void {
   let bridge: SttBridge | null = null;
+  let tts: TtsBridge | null = null;
   let agent: CallAgent | null = null;
   let callSid = "unknown";
+  let streamSid = "";
   let frameCount = 0;
   // Process caller turns one at a time so LLM calls don't interleave.
   let turnChain: Promise<void> = Promise.resolve();
+
+  /** Send μ-law audio back to the caller as Twilio outbound media frames. */
+  const playToCaller = (base64MuLaw: string): void => {
+    if (!streamSid) return;
+    const buf = Buffer.from(base64MuLaw, "base64");
+    for (let i = 0; i < buf.length; i += OUT_FRAME_BYTES) {
+      const payload = buf.subarray(i, i + OUT_FRAME_BYTES).toString("base64");
+      socket.send(JSON.stringify({ event: "media", streamSid, media: { payload } }));
+    }
+  };
 
   socket.on("message", async (raw: Buffer) => {
     let msg: TwilioMessage;
@@ -53,18 +69,26 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
       case "start": {
         const start = (msg as TwilioStartMessage).start;
         callSid = start?.callSid ?? "unknown";
+        streamSid = start?.streamSid ?? "";
         const callerPhone = start?.customParameters?.callerPhone ?? "unknown";
-        log.info({ callSid, streamSid: start?.streamSid, callerPhone }, "Media stream started");
+        log.info({ callSid, streamSid, callerPhone }, "Media stream started");
 
         agent = new CallAgent(log, callSid, callerPhone);
-        log.info({ callSid }, `🤖 Mello (greeting): ${agent.greeting()}`);
 
-        // Feed each finalized transcript into the brain, serialized.
+        // Voice out: Sarvam TTS → μ-law → Twilio.
+        tts = new TtsBridge(log, callSid, playToCaller);
+        await tts.start();
+
+        // Speak the membership-aware greeting.
+        const greeting = agent.greeting();
+        log.info({ callSid }, `🤖 Mello (greeting): ${greeting}`);
+        void tts.say(greeting);
+
+        // Voice in: each finalized transcript → brain → TTS, serialized.
         bridge = new SttBridge(log, callSid, (text) => {
           turnChain = turnChain.then(async () => {
             const reply = await agent!.handleUserTurn(text);
-            // Step 6: send `reply` to Sarvam TTS and stream it back to Twilio.
-            void reply;
+            if (reply) await tts!.say(reply);
           });
         });
         await bridge.start();
@@ -78,7 +102,9 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
       case "stop": {
         log.info({ callSid, frames: frameCount }, "Media stream stopped");
         await bridge?.stop();
+        await tts?.stop();
         bridge = null;
+        tts = null;
         break;
       }
       // "connected", "mark", and anything else: ignore.
@@ -87,6 +113,7 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
 
   socket.on("close", async () => {
     await bridge?.stop();
+    await tts?.stop();
     log.info({ callSid, frames: frameCount }, "Twilio media WS closed");
   });
 
