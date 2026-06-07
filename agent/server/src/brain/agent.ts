@@ -8,6 +8,9 @@ import { TOOLS, dispatchTool } from "./tools.js";
 
 const MAX_TOOL_HOPS = 6; // safety cap on tool-call loops per user turn
 
+/** Spoken when the model returns nothing — never leave the caller in silence. */
+const FALLBACK_REPLY = "Sorry, ek baar aur boliye — kaunsa time aur sport chahiye?";
+
 /**
  * One conversation with one caller. Holds the message history, runs the Sarvam
  * chat loop, and executes tool calls against the booking engine.
@@ -116,13 +119,14 @@ export class CallAgent {
         continue; // loop again so the model can use the tool results
       }
 
-      const reply = (msg.content ?? "").trim();
+      const reply = (msg.content ?? "").trim() || FALLBACK_REPLY;
       this.messages.push({ role: "assistant", content: reply });
       this.log.info({ callSid: this.callSid }, `🤖 Mello: ${reply}`);
       return reply;
     }
 
     this.log.warn({ callSid: this.callSid }, "Tool-call loop hit max hops without a final reply.");
-    return "";
+    this.messages.push({ role: "assistant", content: FALLBACK_REPLY });
+    return FALLBACK_REPLY;
   }
 }

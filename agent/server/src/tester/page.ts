@@ -93,6 +93,9 @@ export const TESTER_HTML = /* html */ `<!doctype html>
     return div;
   }
 
+  // Remove a bubble AND its label (bubble() appends a tag then the div).
+  function removeBubble(div) { div.previousElementSibling?.remove(); div.remove(); }
+
   function play(b64) {
     if (!b64 || !$('autoplay').checked) return;
     new Audio('data:audio/wav;base64,' + b64).play().catch(() => {});
@@ -108,7 +111,7 @@ export const TESTER_HTML = /* html */ `<!doctype html>
     sessionId = 'sess-' + Math.random().toString(36).slice(2);
     const thinking = bubble('connecting…', 'mello'); thinking.classList.add('thinking');
     const res = await post('/test/start', { sessionId, callerPhone: $('caller').value, speaker: $('voice').value });
-    thinking.remove();
+    removeBubble(thinking);
     bubble(res.reply || '(no greeting)', 'mello');
     play(res.audio);
     $('text').disabled = false; $('send').disabled = false; $('text').focus();
@@ -123,7 +126,7 @@ export const TESTER_HTML = /* html */ `<!doctype html>
     bubble(text, 'me');
     const thinking = bubble('…', 'mello'); thinking.classList.add('thinking');
     const res = await post('/test/message', { sessionId, text, speaker: $('voice').value });
-    thinking.remove();
+    removeBubble(thinking);
     bubble(res.reply || '(no reply)', 'mello');
     play(res.audio);
   }
