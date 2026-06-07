@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The voice agent server is a separate package (its own deps/tsconfig);
+    // the Next.js website build must NOT lint or typecheck it.
+    "agent/**",
   ]),
 ]);
 
