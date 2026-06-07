@@ -5,11 +5,21 @@ import { BookingEngine, type CallerContext } from "../booking/engine.js";
 import { loadFacilityConfig, renderSystemPrompt } from "../facility/facility.js";
 import { nowInTz } from "../util/datetime.js";
 import { TOOLS, dispatchTool } from "./tools.js";
+import { startCall, endCall, logTranscript, logToolCall } from "../db/persistence.js";
 
 const MAX_TOOL_HOPS = 6; // safety cap on tool-call loops per user turn
 
 /** Spoken when the model returns nothing — never leave the caller in silence. */
 const FALLBACK_REPLY = "Sorry, ek baar aur boliye — kaunsa time aur sport chahiye?";
+
+/** Parse a tool-args JSON string for logging; falls back to the raw string. */
+function safeJson(s: string): unknown {
+  try {
+    return s ? JSON.parse(s) : {};
+  } catch {
+    return { raw: s };
+  }
+}
 
 /**
  * One conversation with one caller. Holds the message history, runs the Sarvam
@@ -25,6 +35,9 @@ export class CallAgent {
   private readonly engine: BookingEngine;
   private readonly ctx: CallerContext;
   private readonly greetingLine: string;
+  private readonly facilityId: string;
+  private readonly callerPhone: string;
+  private callId: string | null = null;
   private readonly messages: SarvamAI.ChatCompletionRequestMessage[] = [];
 
   constructor(
@@ -34,6 +47,8 @@ export class CallAgent {
   ) {
     const config = loadFacilityConfig();
     const now = nowInTz();
+    this.facilityId = config.facility.id;
+    this.callerPhone = callerPhone;
     this.engine = new BookingEngine(config, now.date);
 
     const member = this.engine.verifyMember(callerPhone);
@@ -70,6 +85,25 @@ export class CallAgent {
       : null;
   }
 
+  /**
+   * Begin the call: open a call_logs row (for the learning loop) and return the
+   * spoken greeting. Persistence is best-effort and never blocks the call.
+   */
+  async startSession(): Promise<string> {
+    this.callId = await startCall(this.log, this.facilityId, {
+      callSid: this.callSid,
+      callerPhone: this.callerPhone,
+      isMember: this.ctx.isMember,
+    });
+    void logTranscript(this.log, this.facilityId, this.callId, "mello", this.greetingLine);
+    return this.greetingLine;
+  }
+
+  /** End the call: close the call_logs row. */
+  async endSession(outcome?: string): Promise<void> {
+    await endCall(this.log, this.callId, outcome);
+  }
+
   /** The opening line the caller hears (no LLM round-trip needed). */
   greeting(): string {
     return this.greetingLine;
@@ -83,9 +117,12 @@ export class CallAgent {
     }
 
     this.messages.push({ role: "user", content: text });
+    void logTranscript(this.log, this.facilityId, this.callId, "caller", text);
 
     try {
-      return await this.runToolLoop();
+      const reply = await this.runToolLoop();
+      void logTranscript(this.log, this.facilityId, this.callId, "mello", reply);
+      return reply;
     } catch (err) {
       // Network blip / API error mid-turn must never crash the call or go silent.
       this.log.error({ callSid: this.callSid, err }, "Brain turn failed");
@@ -120,6 +157,14 @@ export class CallAgent {
           this.log.info(
             { callSid: this.callSid, tool: tc.function.name, args: tc.function.arguments, result },
             "🔧 tool call",
+          );
+          void logToolCall(
+            this.log,
+            this.facilityId,
+            this.callId,
+            tc.function.name,
+            safeJson(tc.function.arguments),
+            result,
           );
           this.messages.push({
             role: "tool",

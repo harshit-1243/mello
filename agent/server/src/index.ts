@@ -3,7 +3,7 @@ import formbody from "@fastify/formbody";
 import websocket from "@fastify/websocket";
 import twilio from "twilio";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { env, twilioConfigured, sarvamConfigured } from "./env.js";
+import { env, twilioConfigured, sarvamConfigured, dbConfigured } from "./env.js";
 import { handleTwilioStream } from "./voice/twilioStream.js";
 import { warmFillers } from "./voice/ttsBridge.js";
 import { CallAgent } from "./brain/agent.js";
@@ -70,6 +70,7 @@ app.get("/health", async () => ({
   env: env.NODE_ENV,
   twilioConfigured,
   sarvamConfigured,
+  dbConfigured,
 }));
 
 app.get("/", async () => ({ service: "mello-voice", status: "up" }));
@@ -131,7 +132,7 @@ app.post("/test/start", async (request) => {
   if (!sessionId) return { error: "missing_sessionId" };
   const agent = new CallAgent(app.log, `TEST-${sessionId}`, callerPhone || "+910000000000");
   testSessions.set(sessionId, agent);
-  const reply = agent.greeting();
+  const reply = await agent.startSession();
   const audio = await synthesizeWav(reply, speaker);
   return { reply, audio };
 });
@@ -164,6 +165,11 @@ try {
   } else {
     // Pre-generate filler audio so it plays instantly on the first call.
     void warmFillers(app.log);
+  }
+  if (!dbConfigured) {
+    app.log.warn(
+      "Supabase not configured — running on the in-memory config seed; calls/transcripts/bookings are NOT persisted. Add SUPABASE_URL + SUPABASE_SERVICE_KEY to .env.local.",
+    );
   }
 } catch (err) {
   app.log.error(err);

@@ -80,8 +80,8 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
         tts = new TtsBridge(log, callSid, playToCaller);
         await tts.start();
 
-        // Speak the membership-aware greeting.
-        const greeting = agent.greeting();
+        // Open the call record + speak the membership-aware greeting.
+        const greeting = await agent.startSession();
         log.info({ callSid }, `🤖 Mello (greeting): ${greeting}`);
         void tts.say(greeting);
 
@@ -106,8 +106,10 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
         log.info({ callSid, frames: frameCount }, "Media stream stopped");
         await bridge?.stop();
         await tts?.stop();
+        await agent?.endSession();
         bridge = null;
         tts = null;
+        agent = null;
         break;
       }
       // "connected", "mark", and anything else: ignore.
@@ -117,6 +119,7 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
   socket.on("close", async () => {
     await bridge?.stop();
     await tts?.stop();
+    await agent?.endSession();
     log.info({ callSid, frames: frameCount }, "Twilio media WS closed");
   });
 

@@ -11,11 +11,13 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
+    "@supabase/supabase-js": "^2.107.0",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "sarvamai": "^1.1.7",

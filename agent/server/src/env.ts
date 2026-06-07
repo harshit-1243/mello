@@ -64,6 +64,13 @@ export const env = {
   // Facility whose config.json + system-prompt.md to load. Defaults to the
   // demo facility, resolved relative to the package (agent/facilities/...).
   FACILITY_DIR: optional("FACILITY_DIR"),
+
+  // --- Supabase (Step 7) ---------------------------------------------------
+  // Project URL + SERVICE ROLE key (server-side writes; bypasses RLS). Get them
+  // at Supabase dashboard → Project Settings → API. Without these the server
+  // runs on the in-memory config seed (demo still works, nothing persisted).
+  SUPABASE_URL: optional("SUPABASE_URL"),
+  SUPABASE_SERVICE_KEY: optional("SUPABASE_SERVICE_KEY"),
 } as const;
 
 /** True once we have enough Twilio config to actually handle live calls. */
@@ -72,3 +79,6 @@ export const twilioConfigured =
 
 /** True once Sarvam STT can be used. */
 export const sarvamConfigured = Boolean(env.SARVAM_API_KEY);
+
+/** True once Supabase persistence is available. */
+export const dbConfigured = Boolean(env.SUPABASE_URL) && Boolean(env.SUPABASE_SERVICE_KEY);
