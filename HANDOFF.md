@@ -61,6 +61,7 @@ These were debated and decided. Don't reopen unless user asks:
 8. **Court abstraction:** Mello NEVER says court numbers during a call ("Court 1 is open" is banned). The system silently assigns a court. Court # only appears in the WhatsApp confirmation.
 9. **All-booked policy:** if a sport is fully booked at a time, suggest a different TIME for the same sport — NEVER a different sport.
 10. **Group conflict + member-only + external platform** rejections all just say "booked." No reasons given to caller.
+11. **LLM brain = Sarvam, not OpenAI.** Sarvam's chat API (`sarvam-30b` / `sarvam-105b`, legacy `sarvam-m`) is OpenAI-compatible and supports `tools` / `tool_choice` function calling — confirmed in the SDK types. Chosen over OpenAI because: one vendor (already signed up, free tier, one key), Indian-built so stronger on Hindi/Indic + code-switching (the moat), and data stays in India (aligns with privacy decision #3). OpenAI account stays as a fallback only. Default to `sarvam-105b` (128K ctx) for the brain; evaluate `sarvam-30b` for cost/latency.
 
 ---
 
@@ -121,8 +122,8 @@ mello.ai/
 | GitHub | ✅ `harshit-1243/mello` | push triggers Vercel |
 | Calendly | ✅ live URL set | `connect2harshit123/30min` |
 | Twilio | ✅ signed up | **no Indian number bought yet — KYC pending** |
-| Sarvam AI | ✅ signed up | for STT + TTS in Hindi/English |
-| OpenAI | ✅ signed up | for the agent brain |
+| Sarvam AI | ✅ signed up (free tier) | STT + TTS **and the LLM brain** (chat API w/ tool calling) — Hindi/English |
+| OpenAI | ✅ signed up | fallback only — brain switched to Sarvam (decision #11) |
 | Supabase | ❌ not yet | will be the database |
 | Razorpay | ❌ not yet | for non-member payments (WhatsApp link) |
 | Meta WhatsApp Business API | ❌ not yet | sandbox first, then prod approval |
@@ -187,7 +188,7 @@ If any group member books sport X at time T, no other group member can book spor
 2. ✅ Agent config + system prompt for Raheja Ileseum (user-approved v2)
 3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). `/voice/incoming` greets then opens a Media Stream. Twilio creds are placeholders in `.env.local` (KYC + auth pending).
 4. ✅ **Sarvam STT integration** — `/voice/stream` WebSocket receives Twilio media (μ-law 8kHz), converts to PCM (`src/audio/mulaw.ts`), forwards to Sarvam streaming STT (`src/voice/sttBridge.ts`), logs transcripts. Auto-detect language for code-switching. Verified locally with a simulated media stream (frames received + counted; μ-law decode matches G.711 reference). **Needs `SARVAM_API_KEY` in `.env.local` to actually transcribe** — boots & counts frames without it.
-5. ⏳ **NEXT — OpenAI brain** wired to the system prompt + tool calls
+5. ⏳ **NEXT — Sarvam LLM brain** wired to the system prompt + tool calls (was OpenAI — switched to Sarvam, see decision #11)
 6. ⏳ Sarvam TTS (speak back to caller)
 7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
 8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
@@ -277,29 +278,32 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 5: OpenAI brain.**
+**Step 5: Sarvam LLM brain.**
 
 Steps 3 & 4 are done. `agent/server/` (Fastify + TS): Twilio call → greet →
 `<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM → Sarvam streaming STT →
 transcripts logged. Verified locally with a simulated media stream.
 
-Goal of Step 5: feed each finalized transcript into OpenAI (the Raheja Ileseum
-`system-prompt.md` is the system message) and get the agent's reply + tool calls
-(`verify_member`, `check_availability`, `check_group`, `create_booking`, etc.).
-Step 6 then speaks the reply back via Sarvam TTS. Architecture note: we'll want
-to act on END_SPEECH VAD events (already enabled, `vad_signals: "true"`) to know
-when the caller finished a turn before calling OpenAI.
+Goal of Step 5: feed each finalized transcript into the **Sarvam chat API**
+(`client.chat.completions`, model `sarvam-105b`) with the Raheja Ileseum
+`system-prompt.md` as the system message, and handle the agent's reply + tool
+calls (`verify_member`, `check_availability`, `check_group`, `create_booking`,
+etc.). The SDK is OpenAI-compatible (`tools`, `tool_choice`, `tool_calls`,
+tool-result messages), so the standard tool-call loop applies. Step 6 then
+speaks the reply back via Sarvam TTS. Architecture note: act on END_SPEECH VAD
+events (already enabled, `vad_signals: "true"`) to know when the caller finished
+a turn before calling the LLM. Same `SARVAM_API_KEY` covers STT, LLM, and TTS.
 
 ### Still pending from the user (not blocking the build)
 - **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.
 - **Phone number** — Indian KYC not cleared. For the demo, a temp US number (~$1/mo, no KYC) works; swap later.
-- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `.env.local` as `SARVAM_API_KEY` to turn on transcription.
-- **OpenAI API key** — needed for Step 5. Ask before wiring the brain.
+- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `.env.local` as `SARVAM_API_KEY` → turns on STT **and** the LLM brain (one key for everything).
 
 ### Decisions locked this session
 - Backend = TypeScript on Node (Fastify). ✅
 - Hosting = laptop + ngrok for the demo (free), Railway after. Vercel NOT for voice. ✅
 - STT = Sarvam streaming (`speechToTextStreaming`, auto-detect language) to keep code-switching. NOT the translate resource. ✅
+- LLM brain = Sarvam chat API (`sarvam-105b`), NOT OpenAI. One vendor, India-resident, tool-calling confirmed. ✅
 
 ---
 
