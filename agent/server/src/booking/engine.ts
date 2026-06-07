@@ -27,6 +27,14 @@ export interface CallerContext {
 export interface AvailabilityResult {
   available: boolean;
   alternative_times: string[];
+  /**
+   * Non-private reason a slot is unavailable, safe to tell the caller:
+   * "closed" (outside open hours), "past" (date already gone),
+   * "too_far_ahead" (beyond advance-booking window), "unknown_sport".
+   * Omitted when the slot is simply taken (booked/member/group) — those stay
+   * private and are just reported as "booked".
+   */
+  reason?: "closed" | "past" | "too_far_ahead" | "unknown_sport";
 }
 
 /**
@@ -101,14 +109,27 @@ export class BookingEngine {
     ctx: CallerContext,
   ): AvailabilityResult {
     const sport = this.findSport(args.sport);
-    if (!sport) return { available: false, alternative_times: [] };
+    if (!sport) return { available: false, alternative_times: [], reason: "unknown_sport" };
+
+    // Date sanity (public reasons — safe to tell the caller).
+    const dayOffset = daysBetween(ctx.today, args.date);
+    if (dayOffset < 0) return { available: false, alternative_times: [], reason: "past" };
+    if (dayOffset > this.config.slot_rules.advance_booking_days) {
+      return { available: false, alternative_times: [], reason: "too_far_ahead" };
+    }
 
     const dur = args.duration_minutes ?? this.config.slot_rules.default_duration_minutes;
     const start = toMinutes(args.start_time);
 
+    // Outside open hours = closed (public reason — tell them the hours).
+    if (!this.withinOpenHours(start, dur)) {
+      return { available: false, alternative_times: [], reason: "closed" };
+    }
+
     if (this.isBookable(sport, args.date, start, dur, ctx, args.basketball_mode)) {
       return { available: true, alternative_times: [] };
     }
+    // Taken (booked/member/group) — stay private, no reason exposed.
     return {
       available: false,
       alternative_times: this.bookableAlternatives(sport, args.date, start, dur, ctx, args.basketball_mode),

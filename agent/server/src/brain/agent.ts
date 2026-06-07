@@ -84,8 +84,19 @@ export class CallAgent {
 
     this.messages.push({ role: "user", content: text });
 
+    try {
+      return await this.runToolLoop();
+    } catch (err) {
+      // Network blip / API error mid-turn must never crash the call or go silent.
+      this.log.error({ callSid: this.callSid, err }, "Brain turn failed");
+      this.messages.push({ role: "assistant", content: FALLBACK_REPLY });
+      return FALLBACK_REPLY;
+    }
+  }
+
+  private async runToolLoop(): Promise<string> {
     for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
-      const res = await this.client.chat.completions({
+      const res = await this.client!.chat.completions({
         model: env.SARVAM_LLM_MODEL as SarvamAI.SarvamModelIds,
         messages: this.messages,
         tools: TOOLS,
@@ -95,7 +106,7 @@ export class CallAgent {
       });
 
       const msg = res.choices[0]?.message;
-      if (!msg) return "";
+      if (!msg) return FALLBACK_REPLY;
 
       if (msg.tool_calls && msg.tool_calls.length > 0) {
         // Record the assistant's tool-call turn, then answer each call.

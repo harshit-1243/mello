@@ -25,7 +25,7 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
     function: {
       name: "check_slot",
       description:
-        "Check if a sport slot is bookable for THIS caller in one call. Accounts for court availability, member-only windows, the T-30min release, external bookings, AND group conflicts. Returns { available, alternative_times } where alternative_times are other start times (same sport) that are also fully bookable. Call this before create_booking. If available is false, offer alternative_times[0] — never say why it's unavailable.",
+        "Check if a sport slot is bookable for THIS caller in one call. Accounts for court availability, member-only windows, the T-30min release, external bookings, AND group conflicts. Returns { available, alternative_times, reason? }. If available is false and reason is set ('closed' = outside 8AM–midnight hours, 'past' = date already gone, 'too_far_ahead' = beyond 14 days), tell the caller that specific fact (hours/date) — these are public. If available is false with NO reason, the slot is simply taken: say 'booked' and offer alternative_times[0], never explaining why. Call this before create_booking.",
       parameters: {
         type: "object",
         properties: {
@@ -128,8 +128,8 @@ export function dispatchTool(
         ctx,
       );
 
-    case "create_booking":
-      return engine.createBooking(
+    case "create_booking": {
+      const result = engine.createBooking(
         {
           name: String(args.name ?? ctx.name ?? ""),
           phone: ctx.callerPhone, // authoritative
@@ -141,6 +141,11 @@ export function dispatchTool(
         },
         ctx,
       );
+      // Hide the assigned court from the model — court numbers must NEVER be
+      // spoken on the call (they only go in the WhatsApp confirmation). The
+      // engine still stored it for that later message.
+      return { booking_id: result.booking_id, status: result.status };
+    }
 
     case "send_payment_link":
       // Stubbed until Step 9 (Razorpay + WhatsApp).
