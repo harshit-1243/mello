@@ -8,10 +8,6 @@ import { env } from "../env.js";
 /** Twilio outbound media frame size: 20ms of 8kHz μ-law = 160 bytes. */
 const OUT_FRAME_BYTES = 160;
 
-/** Short, natural acknowledgments played while the brain thinks (masks latency). */
-const FILLERS = ["Let me check…", "Ek second…", "Haan, dekhta hoon…", "Sure, one sec…"];
-const pickFiller = () => FILLERS[Math.floor(Math.random() * FILLERS.length)]!;
-
 /**
  * Twilio Media Streams protocol messages we care about.
  * Twilio also sends "connected" and "mark"; we ignore those here.
@@ -92,8 +88,8 @@ export function handleTwilioStream(socket: WebSocket, log: FastifyBaseLogger): v
         // Voice in: each finalized transcript → brain → TTS, serialized.
         bridge = new SttBridge(log, callSid, (text) => {
           turnChain = turnChain.then(async () => {
-            // Mask think-time with a quick filler so there's no dead air.
-            if (env.VOICE_FILLER) void tts!.say(pickFiller());
+            // Mask think-time with a quick (pre-cached) filler so there's no dead air.
+            if (env.VOICE_FILLER) tts!.sayFiller();
             const reply = await agent!.handleUserTurn(text);
             if (reply) await tts!.say(reply);
           });

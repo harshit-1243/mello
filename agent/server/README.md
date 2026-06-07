@@ -113,8 +113,14 @@ like `verify_member` / `check_group` use the real caller — the model can't spo
 
 ## Voice out (Step 6)
 
-The brain's reply → **Sarvam streaming TTS** ([src/voice/ttsBridge.ts](src/voice/ttsBridge.ts),
-`bulbul:v2`, speaker `anushka`) configured to emit **μ-law @ 8 kHz** — Twilio's
-native format, so no conversion. Audio is re-chunked into 160-byte (20ms) frames
-and streamed back over the same WebSocket as outbound `media`. The greeting is
-spoken via TTS too. Full duplex loop: caller speech → STT → brain → TTS → caller.
+The brain's reply → **Sarvam TTS** ([src/voice/ttsBridge.ts](src/voice/ttsBridge.ts)) →
+**μ-law @ 8 kHz** (Twilio's native format, no conversion) → re-chunked into
+160-byte (20ms) frames → streamed back over the same WebSocket. Greeting too.
+
+**Voice = `bulbul:v3`, speaker `ritu`** (env `SARVAM_TTS_SPEAKER`). We use the
+**non-streaming** endpoint so live calls get the high-quality v3 voices (streaming
+only supports the older, more robotic v2). Tradeoff: ~1.5s to generate a reply vs
+~0.3s streaming — masked by a **pre-cached filler** ("Let me check…", warmed at
+boot via \`warmFillers\`) that plays the instant the caller finishes.
+
+The **test console** uses the exact same model + voice, so it matches real calls.

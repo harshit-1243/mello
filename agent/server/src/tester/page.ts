@@ -51,16 +51,13 @@ export const TESTER_HTML = /* html */ `<!doctype html>
     </label>
     <label>Voice
       <select id="voice">
-        <optgroup label="Female (bulbul:v2)">
-          <option value="anushka" selected>anushka</option>
-          <option value="manisha">manisha</option>
-          <option value="vidya">vidya</option>
-          <option value="arya">arya</option>
+        <optgroup label="Female (bulbul:v3)">
+          <option value="ritu" selected>ritu</option>
+          <option value="priya">priya</option>
         </optgroup>
-        <optgroup label="Male (bulbul:v2)">
-          <option value="abhilash">abhilash</option>
-          <option value="karun">karun</option>
-          <option value="hitesh">hitesh</option>
+        <optgroup label="Male (bulbul:v3)">
+          <option value="rohan">rohan</option>
+          <option value="amit">amit</option>
         </optgroup>
       </select>
     </label>

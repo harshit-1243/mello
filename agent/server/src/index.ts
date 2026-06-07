@@ -5,6 +5,7 @@ import twilio from "twilio";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { env, twilioConfigured, sarvamConfigured } from "./env.js";
 import { handleTwilioStream } from "./voice/twilioStream.js";
+import { warmFillers } from "./voice/ttsBridge.js";
 import { CallAgent } from "./brain/agent.js";
 import { synthesizeWav } from "./tester/synth.js";
 import { TESTER_HTML } from "./tester/page.js";
@@ -160,6 +161,9 @@ try {
     app.log.warn(
       "SARVAM_API_KEY missing — calls connect and audio streams in, but won't be transcribed. Add it to .env.local.",
     );
+  } else {
+    // Pre-generate filler audio so it plays instantly on the first call.
+    void warmFillers(app.log);
   }
 } catch (err) {
   app.log.error(err);

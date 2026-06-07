@@ -56,3 +56,6 @@ next-env.d.ts
 
 # logo exploration files (not part of codebase)
 /public/logos/
+
+# local TTS audition samples
+/agent/server/tts-samples/

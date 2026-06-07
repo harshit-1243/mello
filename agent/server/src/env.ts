@@ -51,10 +51,11 @@ export const env = {
     | "medium"
     | "high",
 
-  // TTS voice + model. bulbul:v2 speakers: anushka, abhilash, manisha, vidya,
-  // arya, karun, hitesh. See README for the full list (incl. bulbul:v3).
-  SARVAM_TTS_MODEL: (optional("SARVAM_TTS_MODEL") ?? "bulbul:v2") as "bulbul:v2" | "bulbul:v3",
-  SARVAM_TTS_SPEAKER: optional("SARVAM_TTS_SPEAKER") ?? "anushka",
+  // TTS voice + model. We use bulbul:v3 (better quality) via the non-streaming
+  // endpoint on BOTH live calls and the test console. Good v3 voices: ritu,
+  // priya (F); rohan, amit (M). See README for the full list.
+  SARVAM_TTS_MODEL: (optional("SARVAM_TTS_MODEL") ?? "bulbul:v3") as "bulbul:v2" | "bulbul:v3",
+  SARVAM_TTS_SPEAKER: optional("SARVAM_TTS_SPEAKER") ?? "ritu",
 
   // Speak a short filler ("Let me check…") the instant the caller finishes, to
   // mask the brain's think time so there's no dead air. Phone calls only.

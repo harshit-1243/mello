@@ -11,7 +11,9 @@ export async function synthesizeWav(text: string, speaker?: string): Promise<str
   const client = new SarvamAIClient({ apiSubscriptionKey: env.SARVAM_API_KEY });
   const res = await client.textToSpeech.convert({
     text,
-    target_language_code: "hi-IN",
+    // bulbul:v3 + en-IN: natural, clean English/Hinglish. Same model + voice as
+    // live calls (env.SARVAM_TTS_SPEAKER), so the console matches the real thing.
+    target_language_code: "en-IN",
     model: env.SARVAM_TTS_MODEL,
     speaker: (speaker ?? env.SARVAM_TTS_SPEAKER) as SarvamAI.TextToSpeechSpeaker,
   });

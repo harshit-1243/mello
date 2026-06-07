@@ -300,10 +300,15 @@ keys** from the user.
   Mello + hear her, no phone/Twilio needed. Runs the real brain+tools+engine;
   per-message voice dropdown. Files: `src/tester/page.ts`, `src/tester/synth.ts`
   (non-streaming TTS → WAV for browser). Routes in `index.ts`.
-- **Voices ARE configurable.** Live-call voice via env `SARVAM_TTS_SPEAKER`
-  (default `anushka`). bulbul:v2 voices: anushka/manisha/vidya/arya (F),
-  abhilash/karun/hitesh (M). bulbul:v3 has ~25 more but is non-streaming only →
-  not usable on live calls yet (only in the test console).
+- **Voice = bulbul:v3 `ritu`** (env `SARVAM_TTS_SPEAKER`, default ritu) on BOTH
+  live calls and the test console. We switched the live path from v2 *streaming*
+  to **v3 non-streaming** (`textToSpeech.convert`, output_audio_codec mulaw @
+  8000) because v2 voices sounded robotic/mispronounced English (dropped letters);
+  v3 is much cleaner. Cost: ~1.5s reply-gen vs ~0.3s streaming → masked by a
+  PRE-CACHED filler (`warmFillers` at boot). Good v3 voices: ritu/priya (F),
+  rohan/amit (M); others can sound robotic so the console dropdown is curated.
+  User picked **ritu** and wants it on the real product, not just demo. ✅
+  NOTE: v3 streaming isn't supported by the SDK, hence non-streaming.
 - **Measured latency (server-side, brain→voice):** TTS time-to-first-audio ~0.28s
   (excellent). Brain: ~0.8–1.5s simple turns; ~4–5s on turns needing
   availability+group tool hops (multi-round-trip). Add STT endpointing (~0.5–1s)
