@@ -188,7 +188,7 @@ If any group member books sport X at time T, no other group member can book spor
 2. ✅ Agent config + system prompt for Raheja Ileseum (user-approved v2)
 3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). `/voice/incoming` greets then opens a Media Stream. Twilio creds are placeholders in `.env.local` (KYC + auth pending).
 4. ✅ **Sarvam STT integration** — `/voice/stream` WebSocket receives Twilio media (μ-law 8kHz), converts to PCM (`src/audio/mulaw.ts`), forwards to Sarvam streaming STT (`src/voice/sttBridge.ts`), logs transcripts. Auto-detect language for code-switching. Verified locally with a simulated media stream (frames received + counted; μ-law decode matches G.711 reference). **Needs `SARVAM_API_KEY` in `.env.local` to actually transcribe** — boots & counts frames without it.
-5. ✅ **Sarvam LLM brain** — `src/brain/agent.ts` runs the Sarvam chat loop (`sarvam-105b`) with `system-prompt.md` as system message + the 6 tools (`src/brain/tools.ts`). Booking-rules engine `src/booking/engine.ts` implements availability, member-only windows + T-30 release, group ±2h conflict, court assignment — seeded from `config.json`. **14/14 rule checks pass** (deterministic, no key needed). LLM loop typechecked + server boots clean; live LLM round-trip pending the key. Caller phone passed via Stream `<Parameter>` so tools can't be spoofed.
+5. ✅ **Sarvam LLM brain** — `src/brain/agent.ts` runs the Sarvam chat loop (`sarvam-105b`) with `system-prompt.md` as system message + the 6 tools (`src/brain/tools.ts`). Booking-rules engine `src/booking/engine.ts` implements availability, member-only windows + T-30 release, group ±2h conflict, court assignment — seeded from `config.json`. **14/14 rule checks pass** (deterministic, no key needed). Caller phone passed via Stream `<Parameter>` so tools can't be spoofed. **LIVE-VERIFIED** against the real Sarvam API: group-conflict scenario handled perfectly (offered alt time same sport, no leak). Key is in `.env.local`.
 6. ⏳ **NEXT — Sarvam TTS** (speak the brain's reply back to caller)
 7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
 8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
@@ -299,7 +299,7 @@ END_SPEECH is fine. Same `SARVAM_API_KEY` covers TTS.
 ### Still pending from the user (not blocking the build)
 - **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.
 - **Phone number** — Indian KYC not cleared. For the demo, a temp US number (~$1/mo, no KYC) works; swap later.
-- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `agent/server/.env.local` as `SARVAM_API_KEY` → turns on STT, the LLM brain, AND TTS (one key for everything). **Not added yet as of end of Step 5.** Once added, do a live brain test before Step 6.
+- **Sarvam API key** — ✅ **ADDED** to `agent/server/.env.local` (free tier). Powers STT, the LLM brain, and TTS. NOTE: env loads `.env.local` first then `.env` (see `src/env.ts`) — `dotenv/config` alone would've missed it. Brain was **live-verified** end-to-end: Manan→7PM badminton→group conflict caught→offered 5PM same sport, code-switched to Hindi, never leaked the group/name. 🎉
 
 ### Decisions locked this session
 - Backend = TypeScript on Node (Fastify). ✅
