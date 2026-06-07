@@ -27,6 +27,8 @@ export class SttBridge {
   constructor(
     private readonly log: FastifyBaseLogger,
     private readonly callSid: string,
+    /** Called with each finalized transcript segment (wired to the brain). */
+    private readonly onTranscript?: (text: string) => void,
   ) {}
 
   /** Open the Sarvam STT socket. No-op (with a warning) if no API key. */
@@ -97,6 +99,7 @@ export class SttBridge {
           { callSid: this.callSid, language: data.language_code },
           `📝 Transcript: ${transcript}`,
         );
+        this.onTranscript?.(transcript);
       }
     } else if (msg.type === "events") {
       const data = msg.data as { signal_type?: string };

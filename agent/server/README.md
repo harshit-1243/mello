@@ -73,4 +73,23 @@ are logged as `📝 Transcript: ...`.
 
 Set `SARVAM_API_KEY` in `.env.local` to enable it. Without the key the call
 still connects and audio frames are counted — you just won't get transcripts.
-The agent doesn't speak back yet (that's Steps 5–6).
+The agent doesn't speak back yet (that's Step 6).
+
+## The brain (Step 5)
+
+Each finalized transcript is fed to the **Sarvam chat LLM** (`sarvam-105b`) using
+the facility's `system-prompt.md` as the system message. The model decides what
+to say and which tools to call; we execute the tools and loop until it produces
+a reply (logged as `🤖 Mello: ...`). Step 6 will speak that reply via TTS.
+
+- **Brain loop:** [src/brain/agent.ts](src/brain/agent.ts) — Sarvam chat + tool-call cycle
+- **Tools:** [src/brain/tools.ts](src/brain/tools.ts) — the 6 function schemas + dispatcher
+- **Rules engine:** [src/booking/engine.ts](src/booking/engine.ts) — availability, member-only
+  windows + T-30 release, group ±2h conflict, court assignment (seeded from `config.json`;
+  swapped for Supabase in Step 7)
+- **Facility data:** [src/facility/facility.ts](src/facility/facility.ts) — loads `config.json` +
+  `system-prompt.md` from `agent/facilities/<id>/`
+
+Same `SARVAM_API_KEY` powers STT **and** the brain. Caller identity (phone) is
+passed from the call webhook into the media stream as a `<Parameter>`, so tools
+like `verify_member` / `check_group` use the real caller — the model can't spoof it.

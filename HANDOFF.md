@@ -188,8 +188,8 @@ If any group member books sport X at time T, no other group member can book spor
 2. ✅ Agent config + system prompt for Raheja Ileseum (user-approved v2)
 3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). `/voice/incoming` greets then opens a Media Stream. Twilio creds are placeholders in `.env.local` (KYC + auth pending).
 4. ✅ **Sarvam STT integration** — `/voice/stream` WebSocket receives Twilio media (μ-law 8kHz), converts to PCM (`src/audio/mulaw.ts`), forwards to Sarvam streaming STT (`src/voice/sttBridge.ts`), logs transcripts. Auto-detect language for code-switching. Verified locally with a simulated media stream (frames received + counted; μ-law decode matches G.711 reference). **Needs `SARVAM_API_KEY` in `.env.local` to actually transcribe** — boots & counts frames without it.
-5. ⏳ **NEXT — Sarvam LLM brain** wired to the system prompt + tool calls (was OpenAI — switched to Sarvam, see decision #11)
-6. ⏳ Sarvam TTS (speak back to caller)
+5. ✅ **Sarvam LLM brain** — `src/brain/agent.ts` runs the Sarvam chat loop (`sarvam-105b`) with `system-prompt.md` as system message + the 6 tools (`src/brain/tools.ts`). Booking-rules engine `src/booking/engine.ts` implements availability, member-only windows + T-30 release, group ±2h conflict, court assignment — seeded from `config.json`. **14/14 rule checks pass** (deterministic, no key needed). LLM loop typechecked + server boots clean; live LLM round-trip pending the key. Caller phone passed via Stream `<Parameter>` so tools can't be spoofed.
+6. ⏳ **NEXT — Sarvam TTS** (speak the brain's reply back to caller)
 7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
 8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
 9. ⏳ WhatsApp confirmation via Meta sandbox (Razorpay link or "pay at venue" message)
@@ -278,26 +278,28 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 5: Sarvam LLM brain.**
+**Step 6: Sarvam TTS (speak the reply back).**
 
-Steps 3 & 4 are done. `agent/server/` (Fastify + TS): Twilio call → greet →
-`<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM → Sarvam streaming STT →
-transcripts logged. Verified locally with a simulated media stream.
+Steps 3–5 are done. `agent/server/` (Fastify + TS): Twilio call → greet →
+`<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM → Sarvam STT → transcript →
+**Sarvam LLM brain (`sarvam-105b`) + tools → reply text (logged)**. Booking rules
+engine verified 14/14.
 
-Goal of Step 5: feed each finalized transcript into the **Sarvam chat API**
-(`client.chat.completions`, model `sarvam-105b`) with the Raheja Ileseum
-`system-prompt.md` as the system message, and handle the agent's reply + tool
-calls (`verify_member`, `check_availability`, `check_group`, `create_booking`,
-etc.). The SDK is OpenAI-compatible (`tools`, `tool_choice`, `tool_calls`,
-tool-result messages), so the standard tool-call loop applies. Step 6 then
-speaks the reply back via Sarvam TTS. Architecture note: act on END_SPEECH VAD
-events (already enabled, `vad_signals: "true"`) to know when the caller finished
-a turn before calling the LLM. Same `SARVAM_API_KEY` covers STT, LLM, and TTS.
+Goal of Step 6: take the brain's reply text (currently just logged in
+`twilioStream.ts` where it says `// Step 6: send reply to Sarvam TTS`), run it
+through **Sarvam streaming TTS**, and stream the resulting audio BACK to Twilio
+over the same media-stream WebSocket. Twilio expects outbound `media` events
+with base64 **μ-law 8kHz** — so we'll need the reverse of `mulaw.ts` (PCM→μ-law)
+since Sarvam TTS returns PCM/WAV. Use `<Connect><Stream>` bidirectionally (it's
+already bidirectional). Also: move the opening greeting from the placeholder
+`<Say>` to TTS so the membership-aware greeting is what the caller hears.
+Architecture note: handle barge-in later; for the demo, simple turn-taking via
+END_SPEECH is fine. Same `SARVAM_API_KEY` covers TTS.
 
 ### Still pending from the user (not blocking the build)
 - **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.
 - **Phone number** — Indian KYC not cleared. For the demo, a temp US number (~$1/mo, no KYC) works; swap later.
-- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `.env.local` as `SARVAM_API_KEY` → turns on STT **and** the LLM brain (one key for everything).
+- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `agent/server/.env.local` as `SARVAM_API_KEY` → turns on STT, the LLM brain, AND TTS (one key for everything). **Not added yet as of end of Step 5.** Once added, do a live brain test before Step 6.
 
 ### Decisions locked this session
 - Backend = TypeScript on Node (Fastify). ✅

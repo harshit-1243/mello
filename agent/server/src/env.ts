@@ -28,10 +28,18 @@ export const env = {
   PUBLIC_BASE_URL: optional("PUBLIC_BASE_URL"),
 
   // --- Sarvam AI (free tier) -----------------------------------------------
-  // Speech-to-text (and later TTS). Get the key at dashboard.sarvam.ai.
-  // Without it the server still accepts calls and counts audio frames, but
-  // can't transcribe.
+  // Speech-to-text, the LLM brain, and (later) TTS — one key for all three.
+  // Get it at dashboard.sarvam.ai. Without it the server still accepts calls
+  // and counts audio frames, but can't transcribe or run the brain.
   SARVAM_API_KEY: optional("SARVAM_API_KEY"),
+
+  // Which Sarvam chat model the brain uses. 105B = best (128K ctx); 30B is
+  // cheaper/faster. Override per-environment if needed.
+  SARVAM_LLM_MODEL: optional("SARVAM_LLM_MODEL") ?? "sarvam-105b",
+
+  // Facility whose config.json + system-prompt.md to load. Defaults to the
+  // demo facility, resolved relative to the package (agent/facilities/...).
+  FACILITY_DIR: optional("FACILITY_DIR"),
 } as const;
 
 /** True once we have enough Twilio config to actually handle live calls. */

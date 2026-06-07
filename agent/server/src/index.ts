@@ -85,16 +85,20 @@ app.post(
     request.log.info({ from, to, callSid }, "Incoming call");
 
     const twiml = new twilio.twiml.VoiceResponse();
-    // Placeholder greeting — Sarvam TTS replaces this in Step 6.
+    // Placeholder audible greeting — Sarvam TTS + the membership-aware greeting
+    // replace this in Step 6.
     twiml.say(
       { voice: "Polly.Aditi", language: "en-IN" },
       "Hello, can you hear me? This is Mello.",
     );
     // <Connect><Stream> keeps the call open and streams the caller's audio to
-    // our /voice/stream WebSocket until they hang up. Step 4 just transcribes;
-    // the agent talking back comes in Steps 5–6.
+    // our /voice/stream WebSocket until they hang up. We pass the caller's
+    // number + call SID as Stream <Parameter>s so the brain knows who's calling
+    // (the media stream itself doesn't carry the From number).
     const connect = twiml.connect();
-    connect.stream({ url: mediaStreamUrl(request) });
+    const stream = connect.stream({ url: mediaStreamUrl(request) });
+    stream.parameter({ name: "callerPhone", value: from });
+    stream.parameter({ name: "callSid", value: callSid });
 
     reply.header("Content-Type", "text/xml").send(twiml.toString());
   },
