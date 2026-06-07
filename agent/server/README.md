@@ -62,6 +62,23 @@ curl -X POST http://localhost:8080/voice/incoming `
 | GET | `/` | Friendly status JSON |
 | POST | `/voice/incoming` | Twilio incoming-call webhook → greets, then `<Connect><Stream>` |
 | WS | `/voice/stream` | Twilio Media Stream → Sarvam STT (transcripts logged) |
+| GET | `/test` | Browser test console — chat with Mello + hear her, no phone needed |
+| POST | `/test/start` | Start a test session → greeting + WAV audio |
+| POST | `/test/message` | Send caller text → brain reply + WAV audio |
+
+## Test console (no phone needed)
+
+`npm run dev`, open **http://localhost:8080/test**. Pick a caller (member /
+non-member / Manan for the group-conflict demo), pick a voice, hit **Start call**,
+then type what the caller says. You see Mello's reply and hear it. This runs the
+**real brain + tools + booking engine** — only STT (mic) and Twilio are skipped.
+
+### Changing the voice
+
+Live-call voice is set by env (`SARVAM_TTS_SPEAKER`, default \`anushka\`). The test
+console has a per-message voice dropdown. **bulbul:v2** voices: female —
+\`anushka\`, \`manisha\`, \`vidya\`, \`arya\`; male — \`abhilash\`, \`karun\`, \`hitesh\`.
+(bulbul:v3 has ~25 more but is non-streaming only, so not usable on live calls yet.)
 
 ## Speech-to-text (Step 4)
 

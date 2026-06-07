@@ -88,6 +88,7 @@ export class CallAgent {
         tools: TOOLS,
         tool_choice: "auto",
         temperature: 0.3,
+        reasoning_effort: env.SARVAM_REASONING_EFFORT,
       });
 
       const msg = res.choices[0]?.message;

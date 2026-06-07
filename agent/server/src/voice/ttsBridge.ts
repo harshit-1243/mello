@@ -33,6 +33,7 @@ export class TtsBridge {
     this.opening = (async () => {
       const client = new SarvamAIClient({ apiSubscriptionKey: env.SARVAM_API_KEY });
       const socket = await client.textToSpeechStreaming.connect({
+        // Streaming TTS only supports bulbul:v2 (v3 is non-streaming only).
         model: "bulbul:v2",
         "Api-Subscription-Key": env.SARVAM_API_KEY!,
       });
@@ -45,7 +46,7 @@ export class TtsBridge {
       // First message must be the config. μ-law @ 8kHz = Twilio's native format.
       socket.configureConnection({
         target_language_code: "hi-IN", // handles Hinglish well with preprocessing on
-        speaker: "anushka",
+        speaker: env.SARVAM_TTS_SPEAKER as SarvamAI.ConfigureConnection.Data.Speaker,
         output_audio_codec: "mulaw",
         speech_sample_rate: 8000,
         enable_preprocessing: true,

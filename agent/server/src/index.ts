@@ -5,6 +5,9 @@ import twilio from "twilio";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { env, twilioConfigured, sarvamConfigured } from "./env.js";
 import { handleTwilioStream } from "./voice/twilioStream.js";
+import { CallAgent } from "./brain/agent.js";
+import { synthesizeWav } from "./tester/synth.js";
+import { TESTER_HTML } from "./tester/page.js";
 
 const app = Fastify({
   logger: {
@@ -110,6 +113,39 @@ app.post(
 // Twilio connects here after <Connect><Stream>; we bridge the audio to Sarvam STT.
 app.get("/voice/stream", { websocket: true }, (socket, request) => {
   handleTwilioStream(socket, request.log);
+});
+
+// --- Browser test console (ElevenLabs-style, no phone needed) ---------------
+// GET /test serves a chat UI; the two POSTs run the real brain + return TTS WAV.
+const testSessions = new Map<string, CallAgent>();
+
+app.get("/test", async (_req, reply) => reply.header("Content-Type", "text/html").send(TESTER_HTML));
+
+app.post("/test/start", async (request) => {
+  const { sessionId, callerPhone, speaker } = (request.body ?? {}) as {
+    sessionId?: string;
+    callerPhone?: string;
+    speaker?: string;
+  };
+  if (!sessionId) return { error: "missing_sessionId" };
+  const agent = new CallAgent(app.log, `TEST-${sessionId}`, callerPhone || "+910000000000");
+  testSessions.set(sessionId, agent);
+  const reply = agent.greeting();
+  const audio = await synthesizeWav(reply, speaker);
+  return { reply, audio };
+});
+
+app.post("/test/message", async (request) => {
+  const { sessionId, text, speaker } = (request.body ?? {}) as {
+    sessionId?: string;
+    text?: string;
+    speaker?: string;
+  };
+  const agent = sessionId ? testSessions.get(sessionId) : undefined;
+  if (!agent) return { error: "no_session" };
+  const reply = await agent.handleUserTurn(text ?? "");
+  const audio = await synthesizeWav(reply, speaker);
+  return { reply, audio };
 });
 
 // --- Boot ------------------------------------------------------------------

@@ -39,9 +39,22 @@ export const env = {
   // and counts audio frames, but can't transcribe or run the brain.
   SARVAM_API_KEY: optional("SARVAM_API_KEY"),
 
-  // Which Sarvam chat model the brain uses. 105B = best (128K ctx); 30B is
-  // cheaper/faster. Override per-environment if needed.
+  // Which Sarvam chat model the brain uses. 105B follows the persona + multi-hop
+  // booking logic much better than 30B (measured), so it's the default despite
+  // 30B being nominally cheaper. Override per-environment if needed.
   SARVAM_LLM_MODEL: optional("SARVAM_LLM_MODEL") ?? "sarvam-105b",
+
+  // Reasoning effort for the brain. "medium" handles the multi-hop conflict
+  // turns cleanly; "low" is faster but flubbed them in testing. Tunable.
+  SARVAM_REASONING_EFFORT: (optional("SARVAM_REASONING_EFFORT") ?? "medium") as
+    | "low"
+    | "medium"
+    | "high",
+
+  // TTS voice + model. bulbul:v2 speakers: anushka, abhilash, manisha, vidya,
+  // arya, karun, hitesh. See README for the full list (incl. bulbul:v3).
+  SARVAM_TTS_MODEL: (optional("SARVAM_TTS_MODEL") ?? "bulbul:v2") as "bulbul:v2" | "bulbul:v3",
+  SARVAM_TTS_SPEAKER: optional("SARVAM_TTS_SPEAKER") ?? "anushka",
 
   // Facility whose config.json + system-prompt.md to load. Defaults to the
   // demo facility, resolved relative to the package (agent/facilities/...).

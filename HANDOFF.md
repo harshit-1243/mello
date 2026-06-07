@@ -295,6 +295,26 @@ audio destroyed in 60s. NOTE: an `escalate_to_human`/`send_payment_link` are
 still stubs — fine until Steps 9–10. Needs **Supabase project URL + anon/service
 keys** from the user.
 
+### Test console + latency + voices (added after Step 6)
+- **Browser test console** at `GET /test` (served by the agent server). Chat with
+  Mello + hear her, no phone/Twilio needed. Runs the real brain+tools+engine;
+  per-message voice dropdown. Files: `src/tester/page.ts`, `src/tester/synth.ts`
+  (non-streaming TTS → WAV for browser). Routes in `index.ts`.
+- **Voices ARE configurable.** Live-call voice via env `SARVAM_TTS_SPEAKER`
+  (default `anushka`). bulbul:v2 voices: anushka/manisha/vidya/arya (F),
+  abhilash/karun/hitesh (M). bulbul:v3 has ~25 more but is non-streaming only →
+  not usable on live calls yet (only in the test console).
+- **Measured latency (server-side, brain→voice):** TTS time-to-first-audio ~0.28s
+  (excellent). Brain: ~0.8–1.5s simple turns; ~4–5s on turns needing
+  availability+group tool hops (multi-round-trip). Add STT endpointing (~0.5–1s)
+  + network (~0.3–0.6s) → end-to-end perceived ~2–3.5s simple, ~6–7s booking-logic
+  turns. **105B + reasoning=medium chosen** (30B was slower AND ignored the
+  persona; reasoning=low flubbed the conflict turn). Both tunable via env.
+- **Latency roadmap (not done):** (a) speak a short filler ("ek sec…") while tools
+  run; (b) combine check_availability+check_group into ONE tool to halve hops on
+  the slow path; (c) stream LLM tokens to TTS sentence-by-sentence. Do these if
+  the demo feels sluggish.
+
 ### Demo readiness note
 The agent is fully functional NOW via laptop + ngrok — the ONLY blocker to a live
 phone demo is a **Twilio number** (KYC pending; a temp US number works). Once a
