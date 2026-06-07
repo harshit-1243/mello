@@ -1,0 +1,295 @@
+{
+  "$schema": "../../schema/facility.schema.json",
+  "facility": {
+    "id": "raheja-ileseum",
+    "name": "Raheja Ileseum",
+    "city": "Mumbai",
+    "timezone": "Asia/Kolkata",
+    "twilio_number": "TBD_AFTER_KYC",
+    "manager_contact": "TBD",
+    "open_time": "08:00",
+    "close_time": "24:00",
+    "default_greeting": "Hi! Welcome to Raheja Ileseum — how can I help?",
+    "language_default": "english_first_then_match_caller"
+  },
+
+  "slot_rules": {
+    "min_duration_minutes": 30,
+    "default_duration_minutes": 60,
+    "extension_step_minutes": 60,
+    "max_duration_minutes": 240,
+    "advance_booking_days": 14,
+    "cancellation_window_hours": 4
+  },
+
+  "court_disclosure_policy": {
+    "mention_courts_in_conversation": false,
+    "include_court_in_whatsapp_confirmation": true,
+    "_note": "Mello speaks only in terms of sport + time. She never tells the caller which court is booked or available. The system silently assigns a court. The specific court number is included in the WhatsApp confirmation so the customer knows where to go when they arrive."
+  },
+
+  "all_courts_booked_policy": {
+    "suggest_alternative_time_for_same_sport": true,
+    "suggest_different_sport": false,
+    "_note": "If all courts of a sport are booked, suggest a different TIME for the same sport. NEVER suggest a different sport — let the caller decide if they want to switch."
+  },
+
+  "sports": [
+    {
+      "id": "badminton",
+      "name": "Badminton",
+      "courts": [
+        { "id": "badminton_1", "label": "Court 1" },
+        { "id": "badminton_2", "label": "Court 2" },
+        { "id": "badminton_3", "label": "Court 3" }
+      ],
+      "pricing_per_hour_inr": {
+        "non_member": 600,
+        "member": 0
+      }
+    },
+    {
+      "id": "tennis",
+      "name": "Tennis",
+      "courts": [
+        { "id": "tennis_1", "label": "Court 1" }
+      ],
+      "pricing_per_hour_inr": {
+        "non_member": 1200,
+        "member": 0
+      }
+    },
+    {
+      "id": "pickleball",
+      "name": "Pickleball",
+      "courts": [
+        { "id": "pickleball_1", "label": "Court 1" },
+        { "id": "pickleball_2", "label": "Court 2" },
+        { "id": "pickleball_3", "label": "Court 3" }
+      ],
+      "pricing_per_hour_inr": {
+        "non_member": 600,
+        "member": 0
+      }
+    },
+    {
+      "id": "basketball",
+      "name": "Basketball",
+      "splittable": true,
+      "ask_full_or_half_before_booking": true,
+      "courts": [
+        { "id": "basketball_full", "label": "Full court", "mode": "full" },
+        { "id": "basketball_half_a", "label": "Half A", "mode": "half" },
+        { "id": "basketball_half_b", "label": "Half B", "mode": "half" }
+      ],
+      "split_rules": {
+        "full_blocks_halves": true,
+        "any_half_blocks_full": true,
+        "halves_are_independent": true
+      },
+      "pricing_per_hour_inr": {
+        "full_non_member": 1600,
+        "full_member": 0,
+        "half_non_member": 800,
+        "half_member": 0
+      }
+    }
+  ],
+
+  "member_only_windows": [
+    {
+      "label": "Morning members slot",
+      "weekdays": ["mon","tue","wed","thu","fri","sat","sun"],
+      "start": "08:00",
+      "end": "10:00",
+      "applies_to_sports": "all"
+    },
+    {
+      "label": "Evening members slot",
+      "weekdays": ["mon","tue","wed","thu","fri","sat","sun"],
+      "start": "21:00",
+      "end": "23:00",
+      "applies_to_sports": "all"
+    }
+  ],
+  "member_window_release_policy": {
+    "release_minutes_before_slot_start": 30,
+    "_note": "Member-only slots are reserved for members ONLY until 30 minutes before the slot start time. If no member has booked it by T-30min, the slot automatically opens to anyone (members and non-members)."
+  },
+
+  "members": [
+    {
+      "name": "Harshit",
+      "phone": "+918369851507",
+      "tier": "standard",
+      "joined_at": "2025-01-15",
+      "active": true
+    },
+    {
+      "name": "Manan",
+      "phone": "+919653679703",
+      "tier": "standard",
+      "joined_at": "2025-02-10",
+      "active": true
+    },
+    {
+      "name": "Bitu",
+      "phone": "+918976019902",
+      "tier": "standard",
+      "joined_at": "2024-12-01",
+      "active": true
+    },
+    {
+      "name": "Kush",
+      "phone": "+918479641500",
+      "tier": "standard",
+      "joined_at": "2025-03-20",
+      "active": true
+    },
+    {
+      "name": "Krit",
+      "phone": "+918937504721",
+      "tier": "standard",
+      "joined_at": "2025-04-05",
+      "active": true
+    },
+    {
+      "name": "Rahul",
+      "phone": "+919876543210",
+      "tier": "standard",
+      "joined_at": "2025-05-01",
+      "active": true,
+      "_note": "Placeholder member — not a real demo participant."
+    }
+  ],
+
+  "groups": [
+    {
+      "id": "group_1",
+      "label": "Group 1",
+      "member_phones": [
+        "+918369851507",
+        "+919653679703",
+        "+918976019902"
+      ]
+    },
+    {
+      "id": "group_2",
+      "label": "Group 2",
+      "member_phones": [
+        "+918479641500",
+        "+918937504721",
+        "+918976019902"
+      ]
+    }
+  ],
+  "group_restriction_rule": {
+    "scope": "same_sport_any_court",
+    "block_window_hours_before_start": 2,
+    "block_window_hours_after_start": 2,
+    "different_sports_unaffected": true,
+    "different_days_unaffected": true,
+    "_note": "If any group member books a sport at time T, no other member of any group they belong to can book the SAME sport (any court) within ±2 hours of T. Window is measured from the START time of the original booking. Different sports and different days are unaffected. This prevents groups from monopolising the facility with free member bookings."
+  },
+
+  "external_platforms": [
+    {
+      "id": "hudle",
+      "name": "Hudle",
+      "sync_method": "email_parse",
+      "status": "planned_post_demo",
+      "user_facing_label": "booked"
+    },
+    {
+      "id": "khelomore",
+      "name": "Khelomore",
+      "sync_method": "email_parse",
+      "status": "planned_post_demo",
+      "user_facing_label": "booked"
+    }
+  ],
+
+  "payment": {
+    "options_for_non_members": [
+      {
+        "id": "pay_now_link",
+        "label": "Pay now via Razorpay link on WhatsApp",
+        "default_offer_order": 1
+      },
+      {
+        "id": "pay_at_venue",
+        "label": "Pay at venue after playing",
+        "default_offer_order": 2
+      }
+    ],
+    "members_pay_nothing": true,
+    "razorpay_link_validity_minutes": 60,
+    "_note": "After confirming a non-member booking, Mello quotes the price and offers BOTH payment options. The caller picks. Either way, the booking is confirmed instantly. Members pay nothing — no price mention at all in their bookings."
+  },
+
+  "facility_amenities": {
+    "_note": "What Mello knows about. Anything marked 'unknown' = graceful manager callback.",
+    "parking": "unknown",
+    "lockers": "unknown",
+    "food_cafe": "unknown",
+    "equipment_rental": "unknown",
+    "coaching": "unknown",
+    "showers_changing_rooms": "unknown"
+  },
+
+  "demo_seed_bookings": [
+    {
+      "_note": "Seed #1 — External (Hudle) booking. Lets you demo Mello catching an external-platform conflict without ever mentioning the platform name.",
+      "court_id": "badminton_2",
+      "sport": "badminton",
+      "date_offset_days": 1,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "source": "hudle",
+      "external_booking_id": "HD-DEMO-001"
+    },
+    {
+      "_note": "Seed #2 — Bitu's badminton booking. Lets you demo the group-overlap rule live: anyone in Group 1 (Harshit, Manan) or Group 2 (Kush, Krit) trying to book badminton between 6 PM and 10 PM tomorrow gets blocked.",
+      "court_id": "badminton_1",
+      "sport": "badminton",
+      "date_offset_days": 1,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "booked_by_phone": "+918976019902",
+      "booked_by_name": "Bitu",
+      "source": "mello",
+      "_demo_note": "NOTE: this overlaps Seed #1 (both are 8 PM badminton tomorrow). When the demo person tries badminton 8 PM tomorrow, Mello will report all 3 badminton courts as booked (Court 1 = Bitu via Mello, Court 2 = Hudle, Court 3 = available). Adjust if you want all 3 booked — see _all_booked_seed."
+    },
+    {
+      "_note": "Seed #3 (OPTIONAL — remove if you don't want it) — Pickleball Court 3 booking to make the 'all 3 booked' demo possible. With seeds #1 and #2 only, badminton Court 3 is still free at 8 PM tomorrow. To demo 'all booked → suggest different time', add a booking on Court 3 too. Uncomment by removing the _disabled flag.",
+      "_disabled": true,
+      "court_id": "badminton_3",
+      "sport": "badminton",
+      "date_offset_days": 1,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "source": "mello"
+    }
+  ],
+
+  "privacy_rules": {
+    "audio_retention_seconds": 60,
+    "transcript_retention_days": 90,
+    "booking_retention": "until_facility_deletes",
+    "never_disclose_other_callers": true,
+    "audit_every_internal_access": true,
+    "internal_model_training": {
+      "allowed_on": ["bookings", "transcripts_aggregated"],
+      "scope": "this_facility_only",
+      "cross_facility_aggregated_anonymised": true,
+      "_note": "Mello may use this facility's booking and transcript data to improve her behaviour for this facility (better understanding of common requests, demand patterns, dialect quirks). Cross-facility training is aggregated and anonymised. Customer data is never sold, never shared with third parties, never used for advertising."
+    }
+  },
+
+  "escalation_triggers": [
+    "complaints",
+    "angry_or_abusive_caller",
+    "amenity_question_not_in_config",
+    "specific_request_outside_mellos_knowledge"
+  ]
+}
