@@ -1,8 +1,10 @@
 import Fastify from "fastify";
 import formbody from "@fastify/formbody";
+import websocket from "@fastify/websocket";
 import twilio from "twilio";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { env, twilioConfigured } from "./env.js";
+import { env, twilioConfigured, sarvamConfigured } from "./env.js";
+import { handleTwilioStream } from "./voice/twilioStream.js";
 
 const app = Fastify({
   logger: {
@@ -12,6 +14,18 @@ const app = Fastify({
 
 // Twilio posts webhooks as application/x-www-form-urlencoded — parse it.
 await app.register(formbody);
+// Media Streams arrive over a WebSocket — register the upgrade handler.
+await app.register(websocket);
+
+/** Build the wss:// URL Twilio should open its media stream to. */
+function mediaStreamUrl(request: FastifyRequest): string {
+  if (env.PUBLIC_BASE_URL) {
+    return env.PUBLIC_BASE_URL.replace(/^http/, "ws").replace(/\/$/, "") + "/voice/stream";
+  }
+  // Fall back to the request host (works behind ngrok, which terminates TLS).
+  const host = (request.headers["x-forwarded-host"] as string) ?? request.headers.host;
+  return `wss://${host}/voice/stream`;
+}
 
 /**
  * Optional guard: confirm a request genuinely came from Twilio.
@@ -51,13 +65,14 @@ app.get("/health", async () => ({
   service: "mello-voice",
   env: env.NODE_ENV,
   twilioConfigured,
+  sarvamConfigured,
 }));
 
 app.get("/", async () => ({ service: "mello-voice", status: "up" }));
 
 // --- Twilio incoming-call webhook ------------------------------------------
-// Twilio hits this the moment the number rings. We answer with TwiML that
-// reads a hello line, then hang up. This proves the phone → server path.
+// Twilio hits this the moment the number rings. We greet the caller, then open
+// a Media Stream so their audio flows to us over a WebSocket for transcription.
 app.post(
   "/voice/incoming",
   { preHandler: validateTwilioSignature },
@@ -70,17 +85,26 @@ app.post(
     request.log.info({ from, to, callSid }, "Incoming call");
 
     const twiml = new twilio.twiml.VoiceResponse();
-    // Polly.Aditi = Indian-English voice. This is a placeholder greeting —
-    // Sarvam STT/TTS replaces this in Step 4–6.
+    // Placeholder greeting — Sarvam TTS replaces this in Step 6.
     twiml.say(
       { voice: "Polly.Aditi", language: "en-IN" },
       "Hello, can you hear me? This is Mello.",
     );
-    twiml.hangup();
+    // <Connect><Stream> keeps the call open and streams the caller's audio to
+    // our /voice/stream WebSocket until they hang up. Step 4 just transcribes;
+    // the agent talking back comes in Steps 5–6.
+    const connect = twiml.connect();
+    connect.stream({ url: mediaStreamUrl(request) });
 
     reply.header("Content-Type", "text/xml").send(twiml.toString());
   },
 );
+
+// --- Twilio Media Stream (WebSocket) ---------------------------------------
+// Twilio connects here after <Connect><Stream>; we bridge the audio to Sarvam STT.
+app.get("/voice/stream", { websocket: true }, (socket, request) => {
+  handleTwilioStream(socket, request.log);
+});
 
 // --- Boot ------------------------------------------------------------------
 try {
@@ -88,6 +112,11 @@ try {
   if (!twilioConfigured) {
     app.log.warn(
       "Twilio not configured yet (no SID/auth token). Server is up; fill in .env.local when KYC + auth clear.",
+    );
+  }
+  if (!sarvamConfigured) {
+    app.log.warn(
+      "SARVAM_API_KEY missing — calls connect and audio streams in, but won't be transcribed. Add it to .env.local.",
     );
   }
 } catch (err) {

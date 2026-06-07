@@ -185,9 +185,9 @@ If any group member books sport X at time T, no other group member can book spor
 
 1. ✅ Marketing website (shipped)
 2. ✅ Agent config + system prompt for Raheja Ileseum (user-approved v2)
-3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). Verified: `/voice/incoming` returns TwiML "Hello, can you hear me? This is Mello." and logs the call. Twilio creds are placeholders in `.env.local` (KYC + auth still pending).
-4. ⏳ **NEXT — Sarvam STT integration** (transcribe caller audio)
-5. ⏳ OpenAI brain wired to the system prompt + tool calls
+3. ✅ **Twilio webhook handler** — `agent/server/` (Fastify + TS). `/voice/incoming` greets then opens a Media Stream. Twilio creds are placeholders in `.env.local` (KYC + auth pending).
+4. ✅ **Sarvam STT integration** — `/voice/stream` WebSocket receives Twilio media (μ-law 8kHz), converts to PCM (`src/audio/mulaw.ts`), forwards to Sarvam streaming STT (`src/voice/sttBridge.ts`), logs transcripts. Auto-detect language for code-switching. Verified locally with a simulated media stream (frames received + counted; μ-law decode matches G.711 reference). **Needs `SARVAM_API_KEY` in `.env.local` to actually transcribe** — boots & counts frames without it.
+5. ⏳ **NEXT — OpenAI brain** wired to the system prompt + tool calls
 6. ⏳ Sarvam TTS (speak back to caller)
 7. ⏳ Supabase DB seeded from `config.json` (members, groups, bookings, audit log)
 8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
@@ -277,25 +277,29 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 4: Sarvam STT integration.**
+**Step 5: OpenAI brain.**
 
-Step 3 is done — `agent/server/` (Fastify + TS) answers Twilio with a TwiML hello
-and logs the call. Verified locally via curl. Stack chosen: Fastify + TypeScript +
-`twilio` SDK + `tsx`/`tsc`. Server boots without Twilio creds (logs a warning).
+Steps 3 & 4 are done. `agent/server/` (Fastify + TS): Twilio call → greet →
+`<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM → Sarvam streaming STT →
+transcripts logged. Verified locally with a simulated media stream.
 
-Goal of Step 4: get the caller's speech transcribed. This means moving from a
-one-shot TwiML `<Say>` to **Twilio Media Streams** — a WebSocket that streams the
-caller's audio to our server, which we forward to **Sarvam STT**. This is the
-step where the persistent-server requirement kicks in (why Vercel is out).
+Goal of Step 5: feed each finalized transcript into OpenAI (the Raheja Ileseum
+`system-prompt.md` is the system message) and get the agent's reply + tool calls
+(`verify_member`, `check_availability`, `check_group`, `create_booking`, etc.).
+Step 6 then speaks the reply back via Sarvam TTS. Architecture note: we'll want
+to act on END_SPEECH VAD events (already enabled, `vad_signals: "true"`) to know
+when the caller finished a turn before calling OpenAI.
 
 ### Still pending from the user (not blocking the build)
 - **Twilio credentials** — Account SID + Auth Token (KYC + auth still pending). Paste into `agent/server/.env.local` when ready.
 - **Phone number** — Indian KYC not cleared. For the demo, a temp US number (~$1/mo, no KYC) works; swap later.
-- **Sarvam API key** — needed for Step 4. Ask for it before wiring STT.
+- **Sarvam API key** — user is on the free tier and can generate it at dashboard.sarvam.ai. Paste into `.env.local` as `SARVAM_API_KEY` to turn on transcription.
+- **OpenAI API key** — needed for Step 5. Ask before wiring the brain.
 
 ### Decisions locked this session
 - Backend = TypeScript on Node (Fastify). ✅
 - Hosting = laptop + ngrok for the demo (free), Railway after. Vercel NOT for voice. ✅
+- STT = Sarvam streaming (`speechToTextStreaming`, auto-detect language) to keep code-switching. NOT the translate resource. ✅
 
 ---
 

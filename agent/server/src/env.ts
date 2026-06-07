@@ -26,8 +26,17 @@ export const env = {
   // have an auth token AND a public https URL (PUBLIC_BASE_URL).
   VALIDATE_TWILIO_SIGNATURE: optional("VALIDATE_TWILIO_SIGNATURE") === "true",
   PUBLIC_BASE_URL: optional("PUBLIC_BASE_URL"),
+
+  // --- Sarvam AI (free tier) -----------------------------------------------
+  // Speech-to-text (and later TTS). Get the key at dashboard.sarvam.ai.
+  // Without it the server still accepts calls and counts audio frames, but
+  // can't transcribe.
+  SARVAM_API_KEY: optional("SARVAM_API_KEY"),
 } as const;
 
 /** True once we have enough Twilio config to actually handle live calls. */
 export const twilioConfigured =
   Boolean(env.TWILIO_ACCOUNT_SID) && Boolean(env.TWILIO_AUTH_TOKEN);
+
+/** True once Sarvam STT can be used. */
+export const sarvamConfigured = Boolean(env.SARVAM_API_KEY);

@@ -15,12 +15,16 @@
   },
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
+    "@fastify/websocket": "^11.2.0",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
-    "twilio": "^5.4.3"
+    "sarvamai": "^1.1.7",
+    "twilio": "^5.4.3",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.2",
     "typescript": "^5"
   }

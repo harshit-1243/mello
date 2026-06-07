@@ -58,6 +58,19 @@ curl -X POST http://localhost:8080/voice/incoming `
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | Liveness probe (Railway) |
+| GET | `/health` | Liveness probe (Railway). Reports `twilioConfigured` / `sarvamConfigured`. |
 | GET | `/` | Friendly status JSON |
-| POST | `/voice/incoming` | Twilio incoming-call webhook → TwiML |
+| POST | `/voice/incoming` | Twilio incoming-call webhook → greets, then `<Connect><Stream>` |
+| WS | `/voice/stream` | Twilio Media Stream → Sarvam STT (transcripts logged) |
+
+## Speech-to-text (Step 4)
+
+On a call, Twilio streams the caller's μ-law 8 kHz audio to `/voice/stream`. We
+convert it to PCM ([src/audio/mulaw.ts](src/audio/mulaw.ts)) and forward it to
+**Sarvam streaming STT** ([src/voice/sttBridge.ts](src/voice/sttBridge.ts)),
+auto-detecting language so Hindi↔English code-switching survives. Transcripts
+are logged as `📝 Transcript: ...`.
+
+Set `SARVAM_API_KEY` in `.env.local` to enable it. Without the key the call
+still connects and audio frames are counted — you just won't get transcripts.
+The agent doesn't speak back yet (that's Steps 5–6).
