@@ -2,7 +2,7 @@ import type { FacilityConfig, Sport } from "../facility/facility.js";
 import { addDays, daysBetween, overlaps, toHHMM, toMinutes } from "../util/datetime.js";
 
 /** A booking held in memory. Times are minutes-from-midnight; date is YYYY-MM-DD. */
-interface Booking {
+export interface Booking {
   id: string;
   sport: string;
   court_id: string;
@@ -15,6 +15,29 @@ interface Booking {
   mode?: "full" | "half";
 }
 
+export interface EngineMember {
+  name: string;
+  phone: string;
+  tier: string;
+  active: boolean;
+}
+
+export interface EngineGroup {
+  id: string;
+  label: string;
+  member_phones: string[];
+}
+
+/**
+ * The dynamic data the engine reasons over. Loaded from Supabase at call start
+ * (one batched read), or seeded from config.json when there's no DB.
+ */
+export interface EngineData {
+  members: EngineMember[];
+  groups: EngineGroup[];
+  bookings: Booking[];
+}
+
 /** Context about the current caller, supplied by the agent (not the LLM). */
 export interface CallerContext {
   callerPhone: string;
@@ -22,6 +45,7 @@ export interface CallerContext {
   name?: string;
   today: string; // YYYY-MM-DD in facility tz
   nowMinutes: number; // minutes since midnight, today
+  facilityId: string;
 }
 
 export interface AvailabilityResult {
@@ -44,19 +68,43 @@ export interface AvailabilityResult {
  */
 export class BookingEngine {
   private bookings: Booking[] = [];
+  private members: EngineMember[] = [];
+  private groups: EngineGroup[] = [];
   private seq = 0;
 
+  /**
+   * @param data Dynamic data from Supabase. If omitted, falls back to the
+   *   config.json members/groups + demo seed bookings (no-DB / demo mode).
+   */
   constructor(
     private readonly config: FacilityConfig,
     private readonly today: string,
+    data?: EngineData,
   ) {
-    this.seed();
+    if (data) {
+      this.members = data.members;
+      this.groups = data.groups;
+      this.bookings = data.bookings;
+    } else {
+      this.members = config.members.map((m) => ({
+        name: m.name,
+        phone: normalizePhone(m.phone),
+        tier: m.tier,
+        active: m.active,
+      }));
+      this.groups = config.groups.map((g) => ({
+        id: g.id,
+        label: g.label,
+        member_phones: g.member_phones.map(normalizePhone),
+      }));
+      this.seedFromConfig();
+    }
   }
 
   // --- Members -------------------------------------------------------------
 
   verifyMember(phone: string): { is_member: boolean; name?: string; tier?: string } {
-    const m = this.config.members.find((x) => x.phone === normalizePhone(phone) && x.active);
+    const m = this.members.find((x) => x.phone === normalizePhone(phone) && x.active);
     return m ? { is_member: true, name: m.name, tier: m.tier } : { is_member: false };
   }
 
@@ -147,7 +195,7 @@ export class BookingEngine {
 
     // Phones of everyone sharing a group with the caller (excluding caller).
     const groupmates = new Set<string>();
-    for (const g of this.config.groups) {
+    for (const g of this.groups) {
       if (g.member_phones.includes(phone)) {
         for (const p of g.member_phones) if (p !== phone) groupmates.add(p);
       }
@@ -178,7 +226,13 @@ export class BookingEngine {
       basketball_mode?: "full" | "half";
     },
     _ctx: CallerContext,
-  ): { booking_id: string; assigned_court: string; status: string } {
+  ): {
+    booking_id: string;
+    assigned_court: string;
+    status: string;
+    court_id?: string;
+    end_time?: string;
+  } {
     const sport = this.findSport(args.sport);
     if (!sport) return { booking_id: "", assigned_court: "", status: "error_unknown_sport" };
 
@@ -189,7 +243,7 @@ export class BookingEngine {
 
     const courtId = free[0]!;
     const court = sport.courts.find((c) => c.id === courtId)!;
-    const id = `MLO-${String(++this.seq).padStart(4, "0")}`;
+    const id = `MLO-${this.today.replace(/-/g, "")}-${String(++this.seq).padStart(4, "0")}`;
     this.bookings.push({
       id,
       sport: sport.id,
@@ -202,7 +256,14 @@ export class BookingEngine {
       name: args.name,
       mode: args.basketball_mode,
     });
-    return { booking_id: id, assigned_court: court.label, status: "confirmed" };
+    // court_id + end_time are returned for PERSISTENCE only — never spoken.
+    return {
+      booking_id: id,
+      assigned_court: court.label,
+      status: "confirmed",
+      court_id: courtId,
+      end_time: toHHMM(start + dur),
+    };
   }
 
   // --- Internals -----------------------------------------------------------
@@ -332,9 +393,9 @@ export class BookingEngine {
     return out;
   }
 
-  private seed(): void {
+  private seedFromConfig(): void {
     for (const s of this.config.demo_seed_bookings) {
-      if (s._disabled) continue;
+      if (s._disabled) continue; // eslint-disable-line no-underscore-dangle
       this.bookings.push({
         id: `SEED-${s.court_id}-${s.start_time}`,
         sport: s.sport,

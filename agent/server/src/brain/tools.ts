@@ -1,6 +1,7 @@
 import type { SarvamAI } from "sarvamai";
 import type { FastifyBaseLogger } from "fastify";
 import { BookingEngine, type CallerContext, normalizePhone } from "../booking/engine.js";
+import { saveBooking } from "../db/persistence.js";
 
 /**
  * The 6 tools Mello can call, in OpenAI/Sarvam function-calling schema.
@@ -98,13 +99,13 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
  * we override caller-identifying args (phone, is_member) from context so the
  * model can't accidentally (or be coaxed to) act as someone else.
  */
-export function dispatchTool(
+export async function dispatchTool(
   name: string,
   argsJson: string,
   ctx: CallerContext,
   engine: BookingEngine,
   log: FastifyBaseLogger,
-): unknown {
+): Promise<unknown> {
   let args: Record<string, unknown> = {};
   try {
     args = argsJson ? (JSON.parse(argsJson) as Record<string, unknown>) : {};
@@ -129,21 +130,33 @@ export function dispatchTool(
       );
 
     case "create_booking": {
+      const sport = String(args.sport);
+      const date = String(args.date);
+      const startTime = String(args.start_time);
+      const mode = args.basketball_mode as "full" | "half" | undefined;
+      const name = String(args.name ?? ctx.name ?? "");
       const result = engine.createBooking(
-        {
-          name: String(args.name ?? ctx.name ?? ""),
-          phone: ctx.callerPhone, // authoritative
-          sport: String(args.sport),
-          date: String(args.date),
-          start_time: String(args.start_time),
-          duration_minutes: args.duration_minutes as number | undefined,
-          basketball_mode: args.basketball_mode as "full" | "half" | undefined,
-        },
+        { name, phone: ctx.callerPhone, sport, date, start_time: startTime, duration_minutes: args.duration_minutes as number | undefined, basketball_mode: mode },
         ctx,
       );
+      // Persist to Supabase so the booking survives across calls (best-effort).
+      if (result.status === "confirmed" && result.court_id && result.end_time) {
+        await saveBooking(log, {
+          id: result.booking_id,
+          facility_id: ctx.facilityId,
+          sport,
+          court_id: result.court_id,
+          booking_date: date,
+          start_time: startTime,
+          end_time: result.end_time,
+          source: "mello",
+          booked_by_phone: ctx.callerPhone,
+          booked_by_name: name,
+          basketball_mode: mode,
+        });
+      }
       // Hide the assigned court from the model — court numbers must NEVER be
-      // spoken on the call (they only go in the WhatsApp confirmation). The
-      // engine still stored it for that later message.
+      // spoken on the call (they only go in the WhatsApp confirmation).
       return { booking_id: result.booking_id, status: result.status };
     }
 

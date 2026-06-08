@@ -2,8 +2,9 @@ import { SarvamAIClient, type SarvamAI } from "sarvamai";
 import type { FastifyBaseLogger } from "fastify";
 import { env } from "../env.js";
 import { BookingEngine, type CallerContext } from "../booking/engine.js";
-import { loadFacilityConfig, renderSystemPrompt } from "../facility/facility.js";
-import { nowInTz } from "../util/datetime.js";
+import { loadEngineData } from "../booking/load.js";
+import { loadFacilityConfig, renderSystemPrompt, type FacilityConfig } from "../facility/facility.js";
+import { nowInTz, type NowInTz } from "../util/datetime.js";
 import { TOOLS, dispatchTool } from "./tools.js";
 import { startCall, endCall, logTranscript, logToolCall } from "../db/persistence.js";
 
@@ -32,68 +33,70 @@ function safeJson(s: string): unknown {
  */
 export class CallAgent {
   private readonly client: SarvamAIClient | null;
-  private readonly engine: BookingEngine;
-  private readonly ctx: CallerContext;
-  private readonly greetingLine: string;
+  private readonly config: FacilityConfig;
+  private readonly now: NowInTz;
   private readonly facilityId: string;
-  private readonly callerPhone: string;
+  private engine!: BookingEngine; // set in startSession (after DB load)
+  private ctx!: CallerContext;
+  private greetingLine = "";
   private callId: string | null = null;
   private readonly messages: SarvamAI.ChatCompletionRequestMessage[] = [];
 
   constructor(
     private readonly log: FastifyBaseLogger,
     private readonly callSid: string,
-    callerPhone: string,
+    private readonly callerPhone: string,
   ) {
-    const config = loadFacilityConfig();
-    const now = nowInTz();
-    this.facilityId = config.facility.id;
-    this.callerPhone = callerPhone;
-    this.engine = new BookingEngine(config, now.date);
-
-    const member = this.engine.verifyMember(callerPhone);
-    this.ctx = {
-      callerPhone,
-      isMember: member.is_member,
-      name: member.name,
-      today: now.date,
-      nowMinutes: now.minutes,
-    };
-
-    this.greetingLine = member.is_member
-      ? `Hi ${member.name}! Welcome to ${config.facility.name} — how can I help?`
-      : config.facility.default_greeting;
-
-    const systemPrompt = renderSystemPrompt({
-      current_date: now.date,
-      current_time: now.time,
-      current_weekday: now.weekday,
-      name: member.name ?? "",
-      day: now.weekday,
-    });
-
-    this.messages.push({ role: "system", content: systemPrompt });
-    // Tell the model who's calling and seed the greeting it already "said".
-    this.messages.push({
-      role: "system",
-      content: `Call connected. Caller phone: ${callerPhone}. Member: ${member.is_member ? `yes (${member.name})` : "no"}. You have already greeted with: "${this.greetingLine}"`,
-    });
-    this.messages.push({ role: "assistant", content: this.greetingLine });
-
+    this.config = loadFacilityConfig();
+    this.now = nowInTz();
+    this.facilityId = this.config.facility.id;
     this.client = env.SARVAM_API_KEY
       ? new SarvamAIClient({ apiSubscriptionKey: env.SARVAM_API_KEY })
       : null;
   }
 
   /**
-   * Begin the call: open a call_logs row (for the learning loop) and return the
-   * spoken greeting. Persistence is best-effort and never blocks the call.
+   * Begin the call: load this facility's data from Supabase (members, groups,
+   * bookings) into the engine, identify the caller, open a call_logs row, and
+   * return the spoken greeting. Falls back to the config seed if there's no DB.
    */
   async startSession(): Promise<string> {
+    const data = await loadEngineData(this.log, this.facilityId, this.now.date);
+    this.engine = new BookingEngine(this.config, this.now.date, data ?? undefined);
+
+    const member = this.engine.verifyMember(this.callerPhone);
+    this.ctx = {
+      callerPhone: this.callerPhone,
+      isMember: member.is_member,
+      name: member.name,
+      today: this.now.date,
+      nowMinutes: this.now.minutes,
+      facilityId: this.facilityId,
+    };
+
+    this.greetingLine = member.is_member
+      ? `Hi ${member.name}! Welcome to ${this.config.facility.name} — how can I help?`
+      : this.config.facility.default_greeting;
+
+    const systemPrompt = renderSystemPrompt({
+      current_date: this.now.date,
+      current_time: this.now.time,
+      current_weekday: this.now.weekday,
+      name: member.name ?? "",
+      day: this.now.weekday,
+    });
+
+    this.messages.push({ role: "system", content: systemPrompt });
+    this.messages.push({
+      role: "system",
+      content: `Call connected. Caller phone: ${this.callerPhone}. Member: ${member.is_member ? `yes (${member.name})` : "no"}. You have already greeted with: "${this.greetingLine}"`,
+    });
+    this.messages.push({ role: "assistant", content: this.greetingLine });
+
     this.callId = await startCall(this.log, this.facilityId, {
       callSid: this.callSid,
       callerPhone: this.callerPhone,
-      isMember: this.ctx.isMember,
+      isMember: member.is_member,
     });
     void logTranscript(this.log, this.facilityId, this.callId, "mello", this.greetingLine);
     return this.greetingLine;
@@ -102,11 +105,6 @@ export class CallAgent {
   /** End the call: close the call_logs row. */
   async endSession(outcome?: string): Promise<void> {
     await endCall(this.log, this.callId, outcome);
-  }
-
-  /** The opening line the caller hears (no LLM round-trip needed). */
-  greeting(): string {
-    return this.greetingLine;
   }
 
   /** Feed in a caller transcript; returns Mello's spoken reply (or "" if none). */
@@ -153,7 +151,7 @@ export class CallAgent {
           tool_calls: msg.tool_calls,
         });
         for (const tc of msg.tool_calls) {
-          const result = dispatchTool(tc.function.name, tc.function.arguments, this.ctx, this.engine, this.log);
+          const result = await dispatchTool(tc.function.name, tc.function.arguments, this.ctx, this.engine, this.log);
           this.log.info(
             { callSid: this.callSid, tool: tc.function.name, args: tc.function.arguments, result },
             "🔧 tool call",
