@@ -225,13 +225,14 @@ export class BookingEngine {
       duration_minutes?: number;
       basketball_mode?: "full" | "half";
     },
-    _ctx: CallerContext,
+    ctx: CallerContext,
   ): {
     booking_id: string;
     assigned_court: string;
     status: string;
     court_id?: string;
     end_time?: string;
+    amount?: number;
   } {
     const sport = this.findSport(args.sport);
     if (!sport) return { booking_id: "", assigned_court: "", status: "error_unknown_sport" };
@@ -256,14 +257,33 @@ export class BookingEngine {
       name: args.name,
       mode: args.basketball_mode,
     });
-    // court_id + end_time are returned for PERSISTENCE only — never spoken.
+    // court_id, end_time + amount are returned for PERSISTENCE + the WhatsApp
+    // confirmation only — none of them are ever spoken on the call.
     return {
       booking_id: id,
       assigned_court: court.label,
       status: "confirmed",
       court_id: courtId,
       end_time: toHHMM(start + dur),
+      amount: this.priceFor(sport, dur, ctx.isMember, args.basketball_mode),
     };
+  }
+
+  /**
+   * Total price in ₹ for a booking. Members always pay 0. Non-members pay the
+   * per-hour rate × hours; basketball uses the full/half rate per
+   * config.sports[].pricing_per_hour_inr.
+   */
+  private priceFor(sport: Sport, durationMinutes: number, isMember: boolean, mode?: "full" | "half"): number {
+    if (isMember) return 0;
+    const p = sport.pricing_per_hour_inr;
+    let perHour: number;
+    if (sport.id === "basketball") {
+      perHour = mode === "half" ? (p.half_non_member ?? 0) : (p.full_non_member ?? 0);
+    } else {
+      perHour = p.non_member ?? 0;
+    }
+    return Math.round((perHour * durationMinutes) / 60);
   }
 
   // --- Internals -----------------------------------------------------------

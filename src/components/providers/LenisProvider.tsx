@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/gsap";
 import { setLenis } from "@/lib/smooth-scroll";
 
 export function LenisProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  // The dashboard uses native scroll — smooth-scroll hijacking feels laggy
+  // over data tables and long transcripts.
+  const onDashboard = pathname?.startsWith("/dashboard") ?? false;
+
   useEffect(() => {
+    if (onDashboard) return;
     // Reduced motion: native scroll, no smoothing. ScrollTrigger still works.
     if (prefersReducedMotion()) {
       ScrollTrigger.refresh();
@@ -51,7 +58,7 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
       lenis.destroy();
       setLenis(null);
     };
-  }, []);
+  }, [onDashboard]);
 
   return <>{children}</>;
 }

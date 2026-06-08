@@ -50,8 +50,8 @@ models from **Sarvam** (STT `saaras` streaming, LLM `sarvam-105b`, TTS `bulbul:v
 - See `agent/server/README.md` for full details.
 
 ### Pending
-- **Step 9 (NEXT):** WhatsApp confirmation + Razorpay link — see "Immediate next step".
-- **Step 10:** facility owner dashboard. **Step 11:** learning loop.
+- **Step 10 (NEXT):** facility owner dashboard (login, see calls/transcripts/bookings, delete). **Step 11:** learning loop.
+- Step 9 ✅ done (WhatsApp confirmation + Razorpay link, graceful stubs). Needs WhatsApp + Razorpay creds in `.env.local` to actually send/charge.
 - **Twilio number** — KYC pending; blocks the live PHONE demo (test console works now).
 - Logo (user prefers streetwear / Jordan Jumpman energy, NOT abstract painting NOT M-monogram)
 - `/privacy` and `/security` pages on the marketing site (discussed, not built)
@@ -138,8 +138,8 @@ mello.ai/
 | Sarvam AI | ✅ signed up (free tier) | STT + TTS **and the LLM brain** (chat API w/ tool calling) — Hindi/English |
 | OpenAI | ✅ signed up | fallback only — brain switched to Sarvam (decision #11) |
 | Supabase | ✅ connected | project `mello`, URL + service key in `.env.local`; schema applied + seeded; persistence LIVE |
-| Razorpay | ❌ not yet | for non-member payments (WhatsApp link) — needed for Step 9 |
-| Meta WhatsApp Business API | ❌ not yet | sandbox first, then prod approval — needed for Step 9 |
+| Razorpay | ❌ not yet | Step 9 code DONE + graceful; add `RAZORPAY_KEY_ID`/`_SECRET` (test keys) to `.env.local` to charge for real |
+| Meta WhatsApp Business API | ❌ not yet | Step 9 code DONE + graceful (logs msg without creds); add `WHATSAPP_TOKEN`/`_PHONE_ID` (sandbox OK) to `.env.local` to send for real |
 | Custom logo | ❌ not yet | exploring streetwear/silhouette directions |
 
 ---
@@ -205,8 +205,8 @@ If any group member books sport X at time T, no other group member can book spor
 6. ✅ **Sarvam TTS** — `src/voice/ttsBridge.ts`. Brain reply → Sarvam streaming TTS (`bulbul:v2`, speaker `anushka`) configured to output **μ-law @ 8kHz directly** (Twilio's native format — zero conversion/resampling). Audio re-chunked to 160-byte frames and streamed back over the same WS as outbound `media`. Greeting moved from placeholder `<Say>` to TTS. **Verified end-to-end locally**: simulated Twilio call → greeting synthesized & 165 media frames (~3.3s) streamed back. Full loop (STT→brain→TTS) complete. Only the real phone leg is untested (needs Twilio number).
 7. 🟡 **Supabase DB — capture layer DONE, read-path pending.** Schema `agent/server/db/schema.sql` (facilities, members, groups, group_members, bookings, call_logs, transcripts, tool_calls, audit_log; RLS enabled). DB client `src/db/client.ts`, persistence `src/db/persistence.ts` (call logs + transcripts + tool calls + audit — the LEARNING-LOOP capture layer), seed `src/db/seed.ts` (`npm run db:seed`). Wired into the agent (startSession/endSession, per-turn transcript + tool-call logging). **Graceful: no creds → in-memory seed, demo still works.** STILL TODO: swap the BookingEngine READ path (members/availability) from config.json to Supabase so bookings persist across calls; per-facility RLS policies (with Step 10 dashboard auth). Needs user's SUPABASE_URL + SERVICE_KEY.
 8. ✅ **5 privacy rules** — audio never persisted (stream-through only); transcripts 90-day TTL + `purgeExpiredTranscripts` (boot + daily, `src/db/persistence.ts`); audit_log wired (call_started, deletes, purges); per-facility isolation (facility_id + RLS); right-to-delete via `delete_my_data` tool (`deleteCallerData`) + `deleteFacilityData()` ready for the dashboard. Verified delete flow + audit entries live.
-9. ⏳ **NEXT — WhatsApp confirmation** via Meta Cloud API (Razorpay link or "pay at venue" message)
-10. ⏳ Basic facility dashboard (login, see calls/transcripts/bookings, delete button)
+9. ✅ **WhatsApp confirmation + Razorpay link** — `src/notify/` (whatsapp.ts, razorpay.ts, confirmation.ts). After a confirmed `create_booking`, the server fires a fire-and-forget WhatsApp confirmation (THE only place the court number appears — never spoken). `send_payment_link` now creates a real Razorpay Payment Link and delivers it over WhatsApp. Graceful: no `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → message is LOGGED not sent; no Razorpay keys → placeholder link. `engine.createBooking` now returns `amount` (members ₹0; non-members rate×hours, basketball full/half). Smoke-verified (₹600 badminton, ₹0 member tennis, ₹800 basketball half). Needs from user (NOT blocking): Meta WhatsApp token + phone-number-id (sandbox OK) and Razorpay test keys → paste into `.env.local`.
+10. 🟡 **IN PROGRESS** — Facility owner dashboard. Visual direction = **Hybrid** (dark live rail + light paper), chosen from 3 rendered mockups (`scripts/mockups/`). Lives in the Next app under `/dashboard` (nested layout, brand tokens; custom-cursor + Lenis disabled there via `usePathname`). **All pages BUILT on seed data:** Overview, Calls list, Call detail (transcript bubbles + tool-call trace + booking card w/ court + privacy delete), Bookings (upcoming/recent), Members (+ groups), Settings (facility/integrations/pricing/privacy). Data layer = `src/lib/dashboard/{data,format,live,db}.ts`. **10.2 PARTIALLY DONE:** `getCalls/getCall/getBookings/getMembers` now read live Supabase (`live.ts`) with seed fallback; `getOverview`+`getSettings` still seed-only. Added **Test Mello page** (`/dashboard/test`) — chat/mic → proxy (`/api/test/[action]`) → agent server's real `/test/*` (CallAgent) → persists to DB + fires WhatsApp. Both web + agent **typecheck clean**, all routes 200. Components in `src/components/dashboard/`. STILL TODO: finish 10.2 (overview/settings live), then (10.3) Supabase magic-link auth + per-facility RLS. Order locked by user: pages → Supabase → auth. **See `TESTING_NOTES.md`** for the full end-to-end test guide + the list of known rough edges.
 11. ⏳ **Per-facility learning loop** (uses Step 7's captured transcripts/tool_calls/outcomes). NOT live model training — it's: (a) prompt/example refinement from real call patterns, (b) per-facility memory (common requests, demand times, dialect quirks) fed as context, (c) optional fine-tuning ONLY if Sarvam supports it. Privacy: this-facility scope, audited, 90-day transcript TTL. See decision #3 + #12.
 
 ### Tool functions (IMPLEMENTED — `src/brain/tools.ts`, run by `dispatchTool`)
@@ -214,7 +214,7 @@ If any group member books sport X at time T, no other group member can book spor
 - `check_slot(sport, date, start_time, duration_minutes?, basketball_mode?)` → `{ available, alternative_times, reason? }` — **ONE combined call** (availability + member-window + T-30 + external + group conflict). Replaced the old separate check_availability + check_group (latency win). `reason` ∈ closed/past/too_far_ahead/unknown_sport (public, explainable); absent = "booked" (private).
 - `create_booking({name, phone, sport, date, start_time, duration_minutes?, basketball_mode?})` → `{ booking_id, status }` (court is HIDDEN from the model — only in WhatsApp). Persists to Supabase.
 - `delete_my_data()` → `{ deleted }` — caller right-to-delete.
-- `send_payment_link(phone, amount, booking_id)` → `{ link_sent }` — **STILL A STUB** (wire in Step 9).
+- `send_payment_link(phone, amount, booking_id)` → `{ link_sent }` — ✅ Step 9: real Razorpay link delivered over WhatsApp (graceful without keys).
 - `escalate_to_human(reason, callback_phone)` → `{ scheduled }` — **STILL A STUB** (wire when dashboard/notifications exist).
 
 ### Hosting plan (DECIDED)
@@ -292,41 +292,43 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 9: WhatsApp confirmation (Meta Cloud API) + Razorpay payment link.**
+**Step 10: facility owner dashboard** (login, see calls/transcripts/bookings,
+delete button). Per-facility RLS auth lands here too. Not yet scoped in detail —
+discuss UI/auth approach with the user first.
 
-Steps 1–8 are DONE. The full voice loop works end-to-end (Twilio → STT → Sarvam
-brain+tools → TTS → caller), Supabase persistence is live (capture + read-path;
-bookings survive across calls), and the 5 privacy rules are in. Voice = bulbul:v3
-`ritu`. Brain live-verified. (Step 9 was NOT started — a `git checkout` left the
-codebase clean at end of Step 8.)
+### Step 9 — DONE this session ✅
+WhatsApp confirmation (Meta Cloud API) + Razorpay payment link. Built the same
+graceful way as everything else (works with stubs, goes live when creds added):
+- `src/notify/whatsapp.ts` — `sendWhatsApp(log, toPhone, message)` via Meta Cloud
+  API (POST graph.facebook.com). No `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → LOGS
+  the message instead of sending. Never throws.
+- `src/notify/razorpay.ts` — `createPaymentLink(log, {amountInr, bookingId, phone})`
+  hits the Payment Links API (amount ×100 → paise, `expire_by` from
+  `RAZORPAY_LINK_VALIDITY_MINUTES`). No keys → placeholder `rzp.io/i/demo-<id>` link.
+- `src/notify/confirmation.ts` — `buildConfirmationText()` (THE only place the
+  court number surfaces), `sendBookingConfirmation()`, `sendPaymentLink()`. Nice
+  formatting: "Today/Tomorrow/Mon, 12 Jun" + "7–8 PM". Members get no price line.
+- `engine.createBooking` now returns `amount` via a private `priceFor()` helper
+  (members ₹0; non-members rate×hours; basketball full/half rates).
+- Wired in `dispatchTool`: after a confirmed `create_booking`, fire-and-forget
+  `sendBookingConfirmation(...)` SERVER-SIDE (court stays out of speech).
+  `send_payment_link` → Razorpay link → WhatsApp (phone from call ctx, not the
+  model — unspoofable).
+- New env vars: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_API_VERSION`
+  (default v21.0), `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`,
+  `RAZORPAY_LINK_VALIDITY_MINUTES`. Flags: `whatsappConfigured`, `razorpayConfigured`.
+- Verified: `tsc --noEmit` clean + smoke test (₹600 badminton, ₹0 member tennis,
+  ₹800 basketball half; court only in WhatsApp text).
 
-Goal of Step 9 — build it the same graceful way (works with stubs, goes live when
-creds added):
-1. `src/notify/whatsapp.ts` — `sendWhatsApp(toPhone, message)` via Meta Cloud API
-   (POST graph.facebook.com). No `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → LOG the
-   message instead of sending (so you can see it).
-2. `src/notify/razorpay.ts` — `createPaymentLink(amount, bookingId, phone)`. No
-   Razorpay keys → return a placeholder link + log.
-3. `src/notify/confirmation.ts` — build the confirmation text (THIS is where the
-   court number appears: "✅ Confirmed — Raheja Ileseum · Badminton · Court 2 ·
-   Tomorrow 8–9 PM · Amount ₹600 (pay at venue)"; members: no price). Load
-   facility name via `loadFacilityConfig()`.
-4. Wire: in `dispatchTool` after a confirmed `create_booking`, fire-and-forget
-   `sendBookingConfirmation(...)` SERVER-SIDE (model only says "confirmation on
-   its way" — court stays out of speech). Wire `send_payment_link` → Razorpay
-   link → WhatsApp.
-5. To compute the amount, `engine.createBooking` should return `amount` (add a
-   `pricePerHour(sport, isMember, mode)` helper using `config.sports[].pricing_per_hour_inr`;
-   members = 0). I had STARTED adding env vars for this then reverted — re-add:
-   `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`.
-
-Needs from user (NOT blocking the build): Meta WhatsApp app (token + phone-number
-id; sandbox is fine) and Razorpay test keys.
+Needs from user to go LIVE (NOT blocking — it logs/placeholders without them):
+Meta WhatsApp app (token + phone-number-id; sandbox is fine) and Razorpay test
+keys → paste into `agent/server/.env.local`.
 
 ### What's already wired vs stubbed (so you don't redo it)
 - ✅ Persistence (call_logs, transcripts, tool_calls, bookings, audit_log) — live in Supabase.
 - ✅ `delete_my_data`, transcript purge, audit logging.
-- 🔌 `send_payment_link` = stub returning `{link_sent:true}` → make real in Step 9.
+- ✅ `send_payment_link` = real Razorpay link over WhatsApp (Step 9; graceful without creds).
+- ✅ WhatsApp booking confirmation fires server-side after `create_booking` (Step 9).
 - 🔌 `escalate_to_human` = stub returning `{scheduled:true}` → wire when dashboard/notifications exist (Step 10).
 
 ### Test console + latency + voices (added after Step 6)

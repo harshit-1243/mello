@@ -71,6 +71,24 @@ export const env = {
   // runs on the in-memory config seed (demo still works, nothing persisted).
   SUPABASE_URL: optional("SUPABASE_URL"),
   SUPABASE_SERVICE_KEY: optional("SUPABASE_SERVICE_KEY"),
+
+  // --- WhatsApp confirmations (Step 9) -------------------------------------
+  // Meta Cloud API: a permanent/system-user token + the phone-number id of the
+  // sending number (Meta dashboard → WhatsApp → API setup). Sandbox creds are
+  // fine for the demo. Without both, confirmations are LOGGED instead of sent,
+  // so you can still see the exact message that would have gone out.
+  WHATSAPP_TOKEN: optional("WHATSAPP_TOKEN"),
+  WHATSAPP_PHONE_ID: optional("WHATSAPP_PHONE_ID"),
+  // Graph API version for the WhatsApp endpoint. Bump if Meta deprecates it.
+  WHATSAPP_API_VERSION: optional("WHATSAPP_API_VERSION") ?? "v21.0",
+
+  // --- Razorpay payment links (Step 9) -------------------------------------
+  // Test keys (rzp_test_...) are enough for the demo. Without them, a
+  // placeholder link is returned + logged instead of hitting the API.
+  RAZORPAY_KEY_ID: optional("RAZORPAY_KEY_ID"),
+  RAZORPAY_KEY_SECRET: optional("RAZORPAY_KEY_SECRET"),
+  // Payment links expire after this many minutes (mirrors config.payment).
+  RAZORPAY_LINK_VALIDITY_MINUTES: Number(optional("RAZORPAY_LINK_VALIDITY_MINUTES") ?? 60),
 } as const;
 
 /** True once we have enough Twilio config to actually handle live calls. */
@@ -82,3 +100,9 @@ export const sarvamConfigured = Boolean(env.SARVAM_API_KEY);
 
 /** True once Supabase persistence is available. */
 export const dbConfigured = Boolean(env.SUPABASE_URL) && Boolean(env.SUPABASE_SERVICE_KEY);
+
+/** True once WhatsApp messages can actually be sent (else they're logged). */
+export const whatsappConfigured = Boolean(env.WHATSAPP_TOKEN) && Boolean(env.WHATSAPP_PHONE_ID);
+
+/** True once real Razorpay links can be created (else a placeholder is used). */
+export const razorpayConfigured = Boolean(env.RAZORPAY_KEY_ID) && Boolean(env.RAZORPAY_KEY_SECRET);

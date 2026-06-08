@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>mello dashboard — Hybrid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body{background:var(--paper);color:var(--ink)}
+  .main{padding:0 0 48px}
+  /* dark live rail */
+  .rail{position:relative;background:var(--stage);color:var(--on-stage);padding:22px 38px;overflow:hidden;border-bottom:1px solid var(--stage-line)}
+  .rail::before{content:"";position:absolute;inset:-60% 40% auto -5%;height:320px;background:radial-gradient(50% 50% at 25% 40%,color-mix(in srgb,var(--signal) 16%,transparent),transparent 70%);pointer-events:none}
+  .rail .lh{display:flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--on-stage-muted);font-weight:600;margin-bottom:14px}
+  .rail .lh .dot{background:var(--signal)}
+  .livecall{position:relative;display:flex;align-items:center;gap:18px}
+  .ring{position:relative;width:46px;height:46px;border-radius:99px;border:2px solid var(--signal);display:grid;place-items:center;color:var(--signal);flex:0 0 auto}
+  .ring::after{content:"";position:absolute;inset:-2px;border-radius:99px;border:2px solid var(--signal);animation:pulse 2s var(--ease) infinite}
+  .livecall .info b{font-size:15px}.livecall .info .m{color:var(--on-stage-muted);font-size:13px;margin-top:2px}
+  .livecall .tx{margin-left:30px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--on-stage-muted);max-width:430px}
+  .livecall .tx .me{color:var(--signal)}
+  .livecall .timer{margin-left:auto;text-align:right}
+  .livecall .timer .t{font-size:22px;font-weight:600;color:var(--signal)}
+  .livecall .timer .l{font-size:11.5px;color:var(--on-stage-muted)}
+  .work{padding:28px 38px 0}
+</style></head><body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark"><span><i style="height:5px"></i><i style="height:10px"></i><i style="height:7px"></i><i style="height:12px"></i></span></span> mello</div>
+    <nav class="nav">
+      <a class="active" href="#">◧ Overview</a>
+      <a href="#">☎ Calls</a>
+      <a href="#">▤ Bookings</a>
+      <a href="#">⦿ Members</a>
+      <a href="#">⚙ Settings</a>
+    </nav>
+    <div class="foot"><div class="av">R</div><div class="who"><b>Raheja Ileseum</b><span>Mumbai · owner</span></div></div>
+  </aside>
+  <main class="main">
+    <div class="rail">
+      <div class="lh"><span class="dot"></span> Live now</div>
+      <div class="livecall">
+        <div class="ring">●</div>
+        <div class="info"><b>+91 96536 79703 · Manan</b><div class="m">Member · badminton · EN→HI</div></div>
+        <div class="tx"><span class="me">mello:</span> Done Manan — confirmation WhatsApp pe aa raha hai…</div>
+        <div class="timer"><div class="t tabular">0:42</div><div class="l">in progress</div></div>
+      </div>
+    </div>
+
+    <div class="work">
+      <div class="head">
+        <div><h1 class="display">Overview</h1><div class="sub">Sunday, 8 June · 8:00 AM – 12:00 AM</div></div>
+        <div class="livepill"><span class="dot"></span> 1 call live now</div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="lab">Calls today</div><div class="val tabular">24</div><div class="delta">▲ 18% vs last Sun</div></div>
+        <div class="card"><div class="lab">Answered</div><div class="val tabular">22</div><div class="delta">92% answer rate</div></div>
+        <div class="card"><div class="lab">Bookings made</div><div class="val tabular">6</div><div class="delta">5 paid · 1 member</div></div>
+        <div class="card"><div class="lab">Revenue booked</div><div class="val tabular">₹3,600</div><div class="delta flat">pay-at-venue ₹1,800</div></div>
+      </div>
+
+      <div class="grid2">
+        <section class="panel">
+          <h2>Recent calls <a href="#">View all →</a></h2>
+          <div class="row"><span class="ph tabular">+91 98765 12</span><span class="meta">Badminton · tomorrow 8 PM</span><span class="tag ok">Booked ✓</span></div>
+          <div class="row"><span class="ph tabular">+91 96536 79</span><span class="meta">Tennis · today 9 PM · member</span><span class="tag ok">Booked ✓</span></div>
+          <div class="row"><span class="ph tabular">+91 90041 22</span><span class="meta">Parking question · callback</span><span class="tag ok">Handled</span></div>
+          <div class="row"><span class="ph tabular">+91 70215 88</span><span class="meta">Missed — caller hung up</span><span class="tag miss">Missed</span></div>
+        </section>
+        <section class="panel">
+          <h2>Upcoming bookings <a href="#">Calendar →</a></h2>
+          <div class="bk"><div class="when tabular">8:00 PM</div><div class="what">Badminton<span>Rahul · non-member · ₹600</span></div><div class="court">Court 2</div></div>
+          <div class="bk"><div class="when tabular">9:00 PM</div><div class="what">Tennis<span>Manan · member</span></div><div class="court">Court 1</div></div>
+          <div class="bk"><div class="when tabular">Sat 6 PM</div><div class="what">Basketball<span>Kush · full · ₹1,600</span></div><div class="court">Full</div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</body></html>

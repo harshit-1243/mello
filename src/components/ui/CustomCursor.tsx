@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 
 /** Difference-blended dot + trailing ring. Desktop fine-pointer only. */
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  // The dashboard is a working tool — it keeps the native cursor.
+  const onDashboard = pathname?.startsWith("/dashboard") ?? false;
 
   useEffect(() => {
+    if (onDashboard) return;
     if (prefersReducedMotion()) return;
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
@@ -58,7 +63,9 @@ export function CustomCursor() {
       document.documentElement.removeEventListener("mouseleave", onLeave);
       document.documentElement.classList.remove("has-cursor");
     };
-  }, []);
+  }, [onDashboard]);
+
+  if (onDashboard) return null;
 
   return (
     <>

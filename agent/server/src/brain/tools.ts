@@ -2,6 +2,7 @@ import type { SarvamAI } from "sarvamai";
 import type { FastifyBaseLogger } from "fastify";
 import { BookingEngine, type CallerContext, normalizePhone } from "../booking/engine.js";
 import { saveBooking, deleteCallerData } from "../db/persistence.js";
+import { sendBookingConfirmation, sendPaymentLink } from "../notify/confirmation.js";
 
 /**
  * The 6 tools Mello can call, in OpenAI/Sarvam function-calling schema.
@@ -163,6 +164,20 @@ export async function dispatchTool(
           booked_by_name: name,
           basketball_mode: mode,
         });
+        // Fire the WhatsApp confirmation SERVER-SIDE (fire-and-forget). This is
+        // the only place the assigned court surfaces — it stays out of speech.
+        void sendBookingConfirmation(log, {
+          sport,
+          courtLabel: result.assigned_court,
+          date,
+          startTime,
+          endTime: result.end_time,
+          amountInr: result.amount ?? 0,
+          isMember: ctx.isMember,
+          phone: ctx.callerPhone,
+          bookingId: result.booking_id,
+          today: ctx.today,
+        });
       }
       // Hide the assigned court from the model — court numbers must NEVER be
       // spoken on the call (they only go in the WhatsApp confirmation).
@@ -174,10 +189,16 @@ export async function dispatchTool(
       return { deleted: ok };
     }
 
-    case "send_payment_link":
-      // Stubbed until Step 9 (Razorpay + WhatsApp).
-      log.info({ phone: normalizePhone(ctx.callerPhone), amount: args.amount }, "send_payment_link (stub)");
-      return { link_sent: true };
+    case "send_payment_link": {
+      // Create a Razorpay link and deliver it over WhatsApp. Caller phone comes
+      // from authoritative call context, never the model, so it can't be spoofed.
+      const sent = await sendPaymentLink(log, {
+        phone: ctx.callerPhone,
+        amountInr: Number(args.amount ?? 0),
+        bookingId: String(args.booking_id ?? ""),
+      });
+      return { link_sent: sent };
+    }
 
     case "escalate_to_human":
       // Stubbed until the dashboard / notification path exists.
