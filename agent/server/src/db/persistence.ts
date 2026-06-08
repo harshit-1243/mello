@@ -123,3 +123,68 @@ export async function saveBooking(log: FastifyBaseLogger, booking: BookingRow): 
     log.warn({ err }, "saveBooking persist failed");
   }
 }
+
+// --- Privacy: retention + right-to-delete ----------------------------------
+
+/**
+ * Delete expired transcripts (past their 90-day TTL). Run on a schedule.
+ * Returns the number of rows removed.
+ */
+export async function purgeExpiredTranscripts(log: FastifyBaseLogger): Promise<number> {
+  if (!db) return 0;
+  try {
+    const { data, error } = await db
+      .from("transcripts")
+      .delete()
+      .lt("expires_at", new Date().toISOString())
+      .select("id");
+    if (error) throw error;
+    const n = data?.length ?? 0;
+    if (n > 0) {
+      log.info({ purged: n }, "Purged expired transcripts");
+      void logAudit(log, null, "system", "purge_expired_transcripts", String(n));
+    }
+    return n;
+  } catch (err) {
+    log.warn({ err }, "purgeExpiredTranscripts failed");
+    return 0;
+  }
+}
+
+/**
+ * Right-to-delete: remove ONE caller's data for a facility — their bookings and
+ * call logs (transcripts + tool_calls cascade via the FK). Audited.
+ */
+export async function deleteCallerData(
+  log: FastifyBaseLogger,
+  facilityId: string,
+  phone: string,
+): Promise<boolean> {
+  if (!db) return false;
+  try {
+    await db.from("bookings").delete().eq("facility_id", facilityId).eq("booked_by_phone", phone);
+    await db.from("call_logs").delete().eq("facility_id", facilityId).eq("caller_phone", phone);
+    void logAudit(log, facilityId, "system", "delete_caller_data", phone);
+    return true;
+  } catch (err) {
+    log.warn({ err }, "deleteCallerData failed");
+    return false;
+  }
+}
+
+/**
+ * Facility-level "delete everything" (for the owner dashboard, Step 10).
+ * Removes all call logs (cascading transcripts/tool_calls) and bookings.
+ */
+export async function deleteFacilityData(log: FastifyBaseLogger, facilityId: string): Promise<boolean> {
+  if (!db) return false;
+  try {
+    await db.from("call_logs").delete().eq("facility_id", facilityId);
+    await db.from("bookings").delete().eq("facility_id", facilityId);
+    void logAudit(log, facilityId, "system", "delete_facility_data", facilityId);
+    return true;
+  } catch (err) {
+    log.warn({ err }, "deleteFacilityData failed");
+    return false;
+  }
+}

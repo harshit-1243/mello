@@ -1,7 +1,7 @@
 import type { SarvamAI } from "sarvamai";
 import type { FastifyBaseLogger } from "fastify";
 import { BookingEngine, type CallerContext, normalizePhone } from "../booking/engine.js";
-import { saveBooking } from "../db/persistence.js";
+import { saveBooking, deleteCallerData } from "../db/persistence.js";
 
 /**
  * The 6 tools Mello can call, in OpenAI/Sarvam function-calling schema.
@@ -74,6 +74,15 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
         },
         required: ["phone", "amount", "booking_id"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_my_data",
+      description:
+        "Delete THIS caller's stored data (their bookings, call logs, transcripts). Call only when the caller explicitly asks to delete their data / be forgotten. Confirm it's done afterward.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
   {
@@ -158,6 +167,11 @@ export async function dispatchTool(
       // Hide the assigned court from the model — court numbers must NEVER be
       // spoken on the call (they only go in the WhatsApp confirmation).
       return { booking_id: result.booking_id, status: result.status };
+    }
+
+    case "delete_my_data": {
+      const ok = await deleteCallerData(log, ctx.facilityId, normalizePhone(ctx.callerPhone));
+      return { deleted: ok };
     }
 
     case "send_payment_link":

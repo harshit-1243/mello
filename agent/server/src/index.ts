@@ -6,6 +6,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { env, twilioConfigured, sarvamConfigured, dbConfigured } from "./env.js";
 import { handleTwilioStream } from "./voice/twilioStream.js";
 import { warmFillers } from "./voice/ttsBridge.js";
+import { purgeExpiredTranscripts } from "./db/persistence.js";
 import { CallAgent } from "./brain/agent.js";
 import { synthesizeWav } from "./tester/synth.js";
 import { TESTER_HTML } from "./tester/page.js";
@@ -170,6 +171,10 @@ try {
     app.log.warn(
       "Supabase not configured — running on the in-memory config seed; calls/transcripts/bookings are NOT persisted. Add SUPABASE_URL + SUPABASE_SERVICE_KEY to .env.local.",
     );
+  } else {
+    // Privacy: purge transcripts past their 90-day TTL — now and daily.
+    void purgeExpiredTranscripts(app.log);
+    setInterval(() => void purgeExpiredTranscripts(app.log), 24 * 60 * 60 * 1000).unref();
   }
 } catch (err) {
   app.log.error(err);

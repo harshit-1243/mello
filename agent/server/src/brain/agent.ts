@@ -6,7 +6,7 @@ import { loadEngineData } from "../booking/load.js";
 import { loadFacilityConfig, renderSystemPrompt, type FacilityConfig } from "../facility/facility.js";
 import { nowInTz, type NowInTz } from "../util/datetime.js";
 import { TOOLS, dispatchTool } from "./tools.js";
-import { startCall, endCall, logTranscript, logToolCall } from "../db/persistence.js";
+import { startCall, endCall, logTranscript, logToolCall, logAudit } from "../db/persistence.js";
 
 const MAX_TOOL_HOPS = 6; // safety cap on tool-call loops per user turn
 
@@ -98,6 +98,7 @@ export class CallAgent {
       callerPhone: this.callerPhone,
       isMember: member.is_member,
     });
+    void logAudit(this.log, this.facilityId, "system", "call_started", this.callSid);
     void logTranscript(this.log, this.facilityId, this.callId, "mello", this.greetingLine);
     return this.greetingLine;
   }
