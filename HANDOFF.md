@@ -33,17 +33,28 @@ Three products under one platform:
 - Vercel auto-deploys on every `git push origin main`
 - All `Book a Demo` CTAs → `SITE.CALENDLY_URL` in `src/lib/site.ts`
 
-### Voice agent — design docs DONE, code NOT STARTED
-Two documents written for the first demo facility:
-- `agent/facilities/raheja-ileseum/config.json` — facility data
-- `agent/facilities/raheja-ileseum/system-prompt.md` — Mello's brain
-- Both have been **reviewed and approved by user** with all corrections applied (v2)
+### Voice agent — Steps 1–8 SHIPPED (in `agent/server/`)
+Full bilingual voice agent works end-to-end. Stack: **Fastify + TypeScript**, all
+models from **Sarvam** (STT `saaras` streaming, LLM `sarvam-105b`, TTS `bulbul:v3`
+`ritu`), telephony via **Twilio Media Streams**, persistence in **Supabase**.
+- Flow: Twilio call → `<Connect><Stream>` → `/voice/stream` WS → μ-law→PCM →
+  Sarvam STT → brain (`sarvam-105b` + 6 tools) → Sarvam TTS (μ-law 8k) → caller.
+- **Browser test console at `GET /test`** — chat with Mello + hear her, no phone needed.
+- Booking-rules engine: availability, member-only windows + T-30 release, group
+  ±2h conflict, court abstraction — DB-backed (Supabase), config fallback.
+- Privacy: audio never stored · 90-day transcript purge · audit log · per-facility
+  isolation · `delete_my_data`.
+- Lots of behavioral hardening done (language matching, decline/insist handling,
+  closed/past/unsupported-sport, court-leak fix, error resilience).
+- Run it: `cd agent/server && npm run dev` → http://localhost:8080/test
+- See `agent/server/README.md` for full details.
 
 ### Pending
-- Voice agent code (Step 3 onwards — see "Next step")
+- **Step 9 (NEXT):** WhatsApp confirmation + Razorpay link — see "Immediate next step".
+- **Step 10:** facility owner dashboard. **Step 11:** learning loop.
+- **Twilio number** — KYC pending; blocks the live PHONE demo (test console works now).
 - Logo (user prefers streetwear / Jordan Jumpman energy, NOT abstract painting NOT M-monogram)
 - `/privacy` and `/security` pages on the marketing site (discussed, not built)
-- Membership/dashboard for facility owners (Phase 2)
 
 ---
 
@@ -126,9 +137,9 @@ mello.ai/
 | Twilio | ✅ signed up | **no Indian number bought yet — KYC pending** |
 | Sarvam AI | ✅ signed up (free tier) | STT + TTS **and the LLM brain** (chat API w/ tool calling) — Hindi/English |
 | OpenAI | ✅ signed up | fallback only — brain switched to Sarvam (decision #11) |
-| Supabase | ❌ not yet | will be the database |
-| Razorpay | ❌ not yet | for non-member payments (WhatsApp link) |
-| Meta WhatsApp Business API | ❌ not yet | sandbox first, then prod approval |
+| Supabase | ✅ connected | project `mello`, URL + service key in `.env.local`; schema applied + seeded; persistence LIVE |
+| Razorpay | ❌ not yet | for non-member payments (WhatsApp link) — needed for Step 9 |
+| Meta WhatsApp Business API | ❌ not yet | sandbox first, then prod approval — needed for Step 9 |
 | Custom logo | ❌ not yet | exploring streetwear/silhouette directions |
 
 ---
@@ -193,18 +204,18 @@ If any group member books sport X at time T, no other group member can book spor
 5. ✅ **Sarvam LLM brain** — `src/brain/agent.ts` runs the Sarvam chat loop (`sarvam-105b`) with `system-prompt.md` as system message + the 6 tools (`src/brain/tools.ts`). Booking-rules engine `src/booking/engine.ts` implements availability, member-only windows + T-30 release, group ±2h conflict, court assignment — seeded from `config.json`. **14/14 rule checks pass** (deterministic, no key needed). Caller phone passed via Stream `<Parameter>` so tools can't be spoofed. **LIVE-VERIFIED** against the real Sarvam API: group-conflict scenario handled perfectly (offered alt time same sport, no leak). Key is in `.env.local`.
 6. ✅ **Sarvam TTS** — `src/voice/ttsBridge.ts`. Brain reply → Sarvam streaming TTS (`bulbul:v2`, speaker `anushka`) configured to output **μ-law @ 8kHz directly** (Twilio's native format — zero conversion/resampling). Audio re-chunked to 160-byte frames and streamed back over the same WS as outbound `media`. Greeting moved from placeholder `<Say>` to TTS. **Verified end-to-end locally**: simulated Twilio call → greeting synthesized & 165 media frames (~3.3s) streamed back. Full loop (STT→brain→TTS) complete. Only the real phone leg is untested (needs Twilio number).
 7. 🟡 **Supabase DB — capture layer DONE, read-path pending.** Schema `agent/server/db/schema.sql` (facilities, members, groups, group_members, bookings, call_logs, transcripts, tool_calls, audit_log; RLS enabled). DB client `src/db/client.ts`, persistence `src/db/persistence.ts` (call logs + transcripts + tool calls + audit — the LEARNING-LOOP capture layer), seed `src/db/seed.ts` (`npm run db:seed`). Wired into the agent (startSession/endSession, per-turn transcript + tool-call logging). **Graceful: no creds → in-memory seed, demo still works.** STILL TODO: swap the BookingEngine READ path (members/availability) from config.json to Supabase so bookings persist across calls; per-facility RLS policies (with Step 10 dashboard auth). Needs user's SUPABASE_URL + SERVICE_KEY.
-8. ⏳ 5 privacy rules baked in (60s audio destroy, 90d transcripts, audit log, per-facility isolation, delete-everything button)
-9. ⏳ WhatsApp confirmation via Meta sandbox (Razorpay link or "pay at venue" message)
+8. ✅ **5 privacy rules** — audio never persisted (stream-through only); transcripts 90-day TTL + `purgeExpiredTranscripts` (boot + daily, `src/db/persistence.ts`); audit_log wired (call_started, deletes, purges); per-facility isolation (facility_id + RLS); right-to-delete via `delete_my_data` tool (`deleteCallerData`) + `deleteFacilityData()` ready for the dashboard. Verified delete flow + audit entries live.
+9. ⏳ **NEXT — WhatsApp confirmation** via Meta Cloud API (Razorpay link or "pay at venue" message)
 10. ⏳ Basic facility dashboard (login, see calls/transcripts/bookings, delete button)
 11. ⏳ **Per-facility learning loop** (uses Step 7's captured transcripts/tool_calls/outcomes). NOT live model training — it's: (a) prompt/example refinement from real call patterns, (b) per-facility memory (common requests, demand times, dialect quirks) fed as context, (c) optional fine-tuning ONLY if Sarvam supports it. Privacy: this-facility scope, audited, 90-day transcript TTL. See decision #3 + #12.
 
-### Tool functions the agent will call (defined in system prompt)
+### Tool functions (IMPLEMENTED — `src/brain/tools.ts`, run by `dispatchTool`)
 - `verify_member(phone)` → `{ is_member, name?, tier? }`
-- `check_availability(sport, date, start, duration, is_member, current_time)` → `{ available, alternative_times }`
-- `check_group(phone, sport, date, start)` → `{ conflict }`
-- `create_booking({...})` → `{ booking_id, assigned_court, status }`
-- `send_payment_link(phone, amount, booking_id)` → `{ link_sent }`
-- `escalate_to_human(reason, callback_phone)` → `{ scheduled }`
+- `check_slot(sport, date, start_time, duration_minutes?, basketball_mode?)` → `{ available, alternative_times, reason? }` — **ONE combined call** (availability + member-window + T-30 + external + group conflict). Replaced the old separate check_availability + check_group (latency win). `reason` ∈ closed/past/too_far_ahead/unknown_sport (public, explainable); absent = "booked" (private).
+- `create_booking({name, phone, sport, date, start_time, duration_minutes?, basketball_mode?})` → `{ booking_id, status }` (court is HIDDEN from the model — only in WhatsApp). Persists to Supabase.
+- `delete_my_data()` → `{ deleted }` — caller right-to-delete.
+- `send_payment_link(phone, amount, booking_id)` → `{ link_sent }` — **STILL A STUB** (wire in Step 9).
+- `escalate_to_human(reason, callback_phone)` → `{ scheduled }` — **STILL A STUB** (wire when dashboard/notifications exist).
 
 ### Hosting plan (DECIDED)
 - **Demo stage = laptop + ngrok (free).** Run `agent/server` locally, expose with
@@ -281,22 +292,42 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 7: Supabase DB (persistence + audit log).**
+**Step 9: WhatsApp confirmation (Meta Cloud API) + Razorpay payment link.**
 
-Steps 3–6 are done. The FULL voice loop works: Twilio call → `<Connect><Stream>`
-→ `/voice/stream` WS → μ-law→PCM → Sarvam STT → **Sarvam LLM brain + tools** →
-reply → **Sarvam TTS (μ-law 8kHz) → streamed back to caller**. Verified
-end-to-end locally (simulated Twilio call); rules engine 14/14; brain live-tested.
+Steps 1–8 are DONE. The full voice loop works end-to-end (Twilio → STT → Sarvam
+brain+tools → TTS → caller), Supabase persistence is live (capture + read-path;
+bookings survive across calls), and the 5 privacy rules are in. Voice = bulbul:v3
+`ritu`. Brain live-verified. (Step 9 was NOT started — a `git checkout` left the
+codebase clean at end of Step 8.)
 
-Goal of Step 7: replace the in-memory `BookingEngine` store (seeded from
-`config.json`) with **Supabase (Postgres)**. Keep the SAME rule logic — only the
-data access changes. Tables: facilities, members, groups (+ membership),
-bookings, external_bookings, call_logs, transcripts, audit_log. Per-facility
-row-level isolation (decision #2/#3). Seed from `config.json`. Also start the
-privacy plumbing (Step 8): audit every internal read, transcript 90-day TTL,
-audio destroyed in 60s. NOTE: an `escalate_to_human`/`send_payment_link` are
-still stubs — fine until Steps 9–10. Needs **Supabase project URL + anon/service
-keys** from the user.
+Goal of Step 9 — build it the same graceful way (works with stubs, goes live when
+creds added):
+1. `src/notify/whatsapp.ts` — `sendWhatsApp(toPhone, message)` via Meta Cloud API
+   (POST graph.facebook.com). No `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → LOG the
+   message instead of sending (so you can see it).
+2. `src/notify/razorpay.ts` — `createPaymentLink(amount, bookingId, phone)`. No
+   Razorpay keys → return a placeholder link + log.
+3. `src/notify/confirmation.ts` — build the confirmation text (THIS is where the
+   court number appears: "✅ Confirmed — Raheja Ileseum · Badminton · Court 2 ·
+   Tomorrow 8–9 PM · Amount ₹600 (pay at venue)"; members: no price). Load
+   facility name via `loadFacilityConfig()`.
+4. Wire: in `dispatchTool` after a confirmed `create_booking`, fire-and-forget
+   `sendBookingConfirmation(...)` SERVER-SIDE (model only says "confirmation on
+   its way" — court stays out of speech). Wire `send_payment_link` → Razorpay
+   link → WhatsApp.
+5. To compute the amount, `engine.createBooking` should return `amount` (add a
+   `pricePerHour(sport, isMember, mode)` helper using `config.sports[].pricing_per_hour_inr`;
+   members = 0). I had STARTED adding env vars for this then reverted — re-add:
+   `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`.
+
+Needs from user (NOT blocking the build): Meta WhatsApp app (token + phone-number
+id; sandbox is fine) and Razorpay test keys.
+
+### What's already wired vs stubbed (so you don't redo it)
+- ✅ Persistence (call_logs, transcripts, tool_calls, bookings, audit_log) — live in Supabase.
+- ✅ `delete_my_data`, transcript purge, audit logging.
+- 🔌 `send_payment_link` = stub returning `{link_sent:true}` → make real in Step 9.
+- 🔌 `escalate_to_human` = stub returning `{scheduled:true}` → wire when dashboard/notifications exist (Step 10).
 
 ### Test console + latency + voices (added after Step 6)
 - **Browser test console** at `GET /test` (served by the agent server). Chat with
