@@ -149,9 +149,9 @@ export async function dispatchTool(
         { name, phone: ctx.callerPhone, sport, date, start_time: startTime, duration_minutes: args.duration_minutes as number | undefined, basketball_mode: mode },
         ctx,
       );
-      // Persist to Supabase so the booking survives across calls (best-effort).
+      // Persist to Supabase so the booking survives across calls.
       if (result.status === "confirmed" && result.court_id && result.end_time) {
-        await saveBooking(log, {
+        const saved = await saveBooking(log, {
           id: result.booking_id,
           facility_id: ctx.facilityId,
           sport,
@@ -164,6 +164,17 @@ export async function dispatchTool(
           booked_by_name: name,
           basketball_mode: mode,
         });
+        // Lost the slot to a concurrent call → roll back the in-memory booking,
+        // send NO confirmation, and tell the model it's unavailable so Mello
+        // offers a different time. Never double-book.
+        if (saved === "conflict") {
+          engine.removeBooking(result.booking_id);
+          log.warn(
+            { tool: "create_booking", sport, date, startTime, court: result.court_id },
+            "create_booking lost a concurrent slot race — reporting unavailable",
+          );
+          return { booking_id: null, status: "unavailable" };
+        }
         // Fire the WhatsApp confirmation SERVER-SIDE (fire-and-forget). This is
         // the only place the assigned court surfaces — it stays out of speech.
         void sendBookingConfirmation(log, {

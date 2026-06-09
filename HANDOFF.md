@@ -292,11 +292,62 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 10: facility owner dashboard** (login, see calls/transcripts/bookings,
-delete button). Per-facility RLS auth lands here too. Not yet scoped in detail —
-discuss UI/auth approach with the user first.
+**Finish Step 10.2 (live data for Overview + Settings), then Step 10.3 (auth).**
+Order locked by user: pages → Supabase → auth. See the full state below.
 
-### Step 9 — DONE this session ✅
+### Step 10 — facility dashboard (IN PROGRESS) 🟡
+- **Visual direction = "Hybrid"** (dark live rail + light paper), chosen from 3
+  rendered mockups (`scripts/mockups/`). Lives in the Next app under `/dashboard`
+  (nested layout, brand tokens; custom-cursor + Lenis disabled there).
+- **All pages BUILT** (seed-backed, some live): Overview, Calls list, Call detail
+  (transcript bubbles + tool-call trace + booking card w/ court + privacy delete),
+  Bookings, Members, Settings, **Test Mello**.
+- **Live Supabase read-path (10.2) — PARTIAL:** `getCalls/getCall/getBookings/
+  getMembers` read real rows (`src/lib/dashboard/live.ts` + `db.ts`) with seed
+  fallback. **STILL SEED:** `getOverview` (stats + live rail) + `getSettings`.
+- **Test Mello** (`/dashboard/test`) — chat **or** mic (browser speech-to-text),
+  her voice played back. Proxies (`/api/test/[action]`) to the agent server's
+  real `/test/*` (CallAgent), so turns persist to Supabase + a booking fires the
+  WhatsApp confirmation. **Text-first**: shows her reply (~2s) then plays voice in
+  the background via a new `/test/speak` endpoint; has a 🔊/🔇 voice toggle.
+- **STILL TODO:** 10.2 leftover (Overview + Settings live), then **10.3 auth**
+  (Supabase magic-link + per-facility RLS — REQUIRED before the dashboard is
+  public; it's currently open).
+
+### Latency — tuned this session
+- The bottleneck was **non-streaming TTS in the test console** (~2.3s), NOT the
+  brain (~2s/turn at `medium`). The greeting (zero LLM) was ~5s = pure TTS.
+- Fix: **text-first console** (reply shows in ~2s, voice loads in background) +
+  mute toggle. Real phone path was already fast (streaming TTS ~0.3s + filler).
+- `SARVAM_REASONING_EFFORT` stays **medium**: `low` wasn't faster (TTS-bound) and
+  skipped the confirm-before-book step. (Tested A/B.)
+- Sarvam free tier intermittently times out under rapid load (~60s) — transient.
+  Future win: stream LLM tokens → TTS sentence-by-sentence (bigger change).
+
+### Concurrency — verified + hardened this session
+- **The agent handles concurrent calls.** `handleTwilioStream` gives every call
+  its own isolated scope (own CallAgent, history, engine, WS). No shared mutable
+  state. Node serves many I/O-bound calls on one instance. Verified live: 3
+  simultaneous test sessions stayed fully separate.
+- **Double-booking race FIXED:** `saveBooking` now (1) pre-checks the exact
+  court/date/start and (2) relies on a DB UNIQUE index as the airtight backstop;
+  on conflict, `dispatchTool` rolls back the in-memory booking (`engine.
+  removeBooking`) and returns `unavailable` so Mello offers another time. Verified
+  deterministically (1st save `saved`, 2nd same-slot `conflict`).
+- ⚠️ **ACTION REQUIRED:** run `agent/server/db/migrations/001_booking_slot_unique.sql`
+  in the Supabase SQL editor to activate the DB-level backstop (the app pre-check
+  works without it; the index is the exact-simultaneous guarantee).
+- Real ceiling at scale = **Sarvam paid tier** (free throttles concurrency).
+
+### WhatsApp — tested LIVE this session ✅
+- Sandbox token + phone-number-id added; **delivery confirmed** (template + a
+  free-form confirmation both arrived on +91 83698 51507).
+- ⚠️ Two gotchas: the sandbox **token expires ~24h** (grab a fresh one from Meta
+  API Setup when it 401s with code 190); and free-form messages only deliver
+  inside the **24h window** (message the test number first). **Production needs a
+  pre-approved utility template** — switch `sendBookingConfirmation` to a template.
+
+### Step 9 — DONE ✅
 WhatsApp confirmation (Meta Cloud API) + Razorpay payment link. Built the same
 graceful way as everything else (works with stubs, goes live when creds added):
 - `src/notify/whatsapp.ts` — `sendWhatsApp(log, toPhone, message)` via Meta Cloud

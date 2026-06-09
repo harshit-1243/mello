@@ -10,7 +10,7 @@ const AGENT_URL = (process.env.AGENT_SERVER_URL || "http://localhost:8080").repl
 
 export async function POST(req: Request, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params;
-  if (action !== "start" && action !== "message") {
+  if (action !== "start" && action !== "message" && action !== "speak") {
     return Response.json({ error: "unknown_action" }, { status: 404 });
   }
 

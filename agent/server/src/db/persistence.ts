@@ -115,12 +115,47 @@ export interface BookingRow {
   basketball_mode?: string;
 }
 
-export async function saveBooking(log: FastifyBaseLogger, booking: BookingRow): Promise<void> {
-  if (!db) return;
+export type SaveBookingResult = "saved" | "conflict" | "error";
+
+/**
+ * Persist a booking, guarding against the concurrent-call double-booking race.
+ *
+ * Two layers:
+ *  1. App-level pre-check — is this exact court/date/start already taken?
+ *     (catches near-simultaneous bookings; a call's in-memory engine snapshot
+ *     can't see a booking another live call just made.)
+ *  2. DB-level backstop — a UNIQUE index on (facility_id, court_id,
+ *     booking_date, start_time) turns a truly-simultaneous insert into a 23505
+ *     unique_violation, which we report as a conflict.
+ *
+ * Returns "conflict" when the slot was taken (caller should offer another time),
+ * "saved" on success (or when there's no DB — the in-memory engine is then the
+ * source of truth), and "error" on a transient failure (best-effort: the call
+ * still confirms rather than dying on a DB hiccup).
+ */
+export async function saveBooking(log: FastifyBaseLogger, booking: BookingRow): Promise<SaveBookingResult> {
+  if (!db) return "saved";
   try {
-    await db.from("bookings").upsert(booking);
+    const { data: existing } = await db
+      .from("bookings")
+      .select("id")
+      .eq("facility_id", booking.facility_id)
+      .eq("court_id", booking.court_id)
+      .eq("booking_date", booking.booking_date)
+      .eq("start_time", booking.start_time)
+      .limit(1);
+    if (existing && existing.length > 0) return "conflict";
+
+    const { error } = await db.from("bookings").insert(booking);
+    if (error) {
+      if ((error as { code?: string }).code === "23505") return "conflict"; // unique_violation
+      log.warn({ err: error }, "saveBooking persist failed");
+      return "error";
+    }
+    return "saved";
   } catch (err) {
-    log.warn({ err }, "saveBooking persist failed");
+    log.warn({ err }, "saveBooking threw");
+    return "error";
   }
 }
 

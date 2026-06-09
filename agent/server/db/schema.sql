@@ -75,6 +75,12 @@ create table if not exists bookings (
   created_at      timestamptz not null default now()
 );
 create index if not exists idx_bookings_lookup on bookings (facility_id, sport, booking_date);
+-- Concurrency backstop: no two bookings can hold the same court + date + start
+-- time. Turns a truly-simultaneous double-booking insert into a 23505 error,
+-- which the app reports as a conflict (offers another time). The app also
+-- pre-checks; this is the airtight guarantee under real concurrency.
+create unique index if not exists bookings_slot_unique
+  on bookings (facility_id, court_id, booking_date, start_time);
 
 -- ---------------------------------------------------------------------------
 -- Call logs (one row per phone call)

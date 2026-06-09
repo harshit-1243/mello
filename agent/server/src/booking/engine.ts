@@ -270,6 +270,14 @@ export class BookingEngine {
   }
 
   /**
+   * Undo an in-memory booking — used to roll back when persistence reports the
+   * slot was grabbed by a concurrent call (so the engine state stays truthful).
+   */
+  removeBooking(id: string): void {
+    this.bookings = this.bookings.filter((b) => b.id !== id);
+  }
+
+  /**
    * Total price in ₹ for a booking. Members always pay 0. Non-members pay the
    * per-hour rate × hours; basketball uses the full/half rate per
    * config.sports[].pricing_per_hour_inr.

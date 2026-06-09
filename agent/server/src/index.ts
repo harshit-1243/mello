@@ -125,30 +125,43 @@ const testSessions = new Map<string, CallAgent>();
 app.get("/test", async (_req, reply) => reply.header("Content-Type", "text/html").send(TESTER_HTML));
 
 app.post("/test/start", async (request) => {
-  const { sessionId, callerPhone, speaker } = (request.body ?? {}) as {
+  const { sessionId, callerPhone, speaker, withAudio } = (request.body ?? {}) as {
     sessionId?: string;
     callerPhone?: string;
     speaker?: string;
+    withAudio?: boolean;
   };
   if (!sessionId) return { error: "missing_sessionId" };
   const agent = new CallAgent(app.log, `TEST-${sessionId}`, callerPhone || "+910000000000");
   testSessions.set(sessionId, agent);
   const reply = await agent.startSession();
-  const audio = await synthesizeWav(reply, speaker);
+  // withAudio:false → return text immediately; the client fetches voice via
+  // /test/speak in parallel so the reply shows without waiting on TTS.
+  const audio = withAudio === false ? null : await synthesizeWav(reply, speaker);
   return { reply, audio };
 });
 
 app.post("/test/message", async (request) => {
-  const { sessionId, text, speaker } = (request.body ?? {}) as {
+  const { sessionId, text, speaker, withAudio } = (request.body ?? {}) as {
     sessionId?: string;
     text?: string;
     speaker?: string;
+    withAudio?: boolean;
   };
   const agent = sessionId ? testSessions.get(sessionId) : undefined;
   if (!agent) return { error: "no_session" };
   const reply = await agent.handleUserTurn(text ?? "");
-  const audio = await synthesizeWav(reply, speaker);
+  const audio = withAudio === false ? null : await synthesizeWav(reply, speaker);
   return { reply, audio };
+});
+
+// Synthesize speech for already-returned text (lets the dashboard show the reply
+// instantly, then play her voice a beat later instead of blocking on TTS).
+app.post("/test/speak", async (request) => {
+  const { text, speaker } = (request.body ?? {}) as { text?: string; speaker?: string };
+  if (!text?.trim()) return { audio: null };
+  const audio = await synthesizeWav(text, speaker);
+  return { audio };
 });
 
 // --- Boot ------------------------------------------------------------------

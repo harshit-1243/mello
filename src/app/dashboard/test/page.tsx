@@ -32,20 +32,22 @@ export default function TestPage() {
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voiceOn, setVoiceOn] = useState(true);
   const sessionId = useRef<string>("");
   const recognitionRef = useRef<unknown>(null);
+  const voiceOnRef = useRef(true);
+  voiceOnRef.current = voiceOn;
 
   function playAudio(base64: string | null) {
     if (!base64) return;
     try {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`);
-      void audio.play();
+      void new Audio(`data:audio/wav;base64,${base64}`).play();
     } catch {
       /* autoplay may be blocked until first interaction — ignore */
     }
   }
 
-  async function call(action: "start" | "message", payload: Record<string, unknown>) {
+  async function call(action: "start" | "message" | "speak", payload: Record<string, unknown>) {
     const res = await fetch(`/api/test/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,17 +56,24 @@ export default function TestPage() {
     return res.json();
   }
 
+  /** Fetch + play Mello's voice for already-shown text, in the background. */
+  function speak(text: string) {
+    if (!voiceOnRef.current || !text) return;
+    void call("speak", { text }).then((d) => playAudio(d.audio));
+  }
+
   async function start() {
     setBusy(true);
     setError(null);
     setMessages([]);
     sessionId.current = `dash-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const data = await call("start", { sessionId: sessionId.current, callerPhone: persona });
+    // withAudio:false → text comes back without waiting on TTS; voice loads after.
+    const data = await call("start", { sessionId: sessionId.current, callerPhone: persona, withAudio: false });
     setBusy(false);
     if (data.error) return setError(humanError(data));
     setStarted(true);
     setMessages([{ role: "mello", text: data.reply }]);
-    playAudio(data.audio);
+    speak(data.reply);
   }
 
   async function send(text: string) {
@@ -73,11 +82,11 @@ export default function TestPage() {
     setInput("");
     setMessages((m) => [...m, { role: "you", text: t }]);
     setBusy(true);
-    const data = await call("message", { sessionId: sessionId.current, text: t });
+    const data = await call("message", { sessionId: sessionId.current, text: t, withAudio: false });
     setBusy(false);
     if (data.error) return setError(humanError(data));
     setMessages((m) => [...m, { role: "mello", text: data.reply }]);
-    playAudio(data.audio);
+    speak(data.reply);
   }
 
   function toggleMic() {
@@ -137,6 +146,17 @@ export default function TestPage() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setVoiceOn((v) => !v)}
+            title={voiceOn ? "Voice on — click to mute" : "Muted — click for voice"}
+            className={cn(
+              "rounded-lg border px-2.5 py-1.5 text-[13px] font-semibold transition-colors",
+              voiceOn ? "border-line text-ink hover:bg-ink/[0.04]" : "border-line text-ink-muted",
+            )}
+          >
+            {voiceOn ? "🔊 Voice" : "🔇 Muted"}
+          </button>
           <div className="ml-auto">
             {!started ? (
               <button
