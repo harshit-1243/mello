@@ -2,6 +2,15 @@
 
 import { useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { demoGreeting, demoReply, type DemoState } from "@/lib/dashboard/demo-mello";
+
+/**
+ * Demo mode: when NEXT_PUBLIC_DEMO_MODE=1 (set on the public Vercel share), the
+ * page uses a self-contained scripted Mello instead of the live agent server.
+ * It also auto-switches to scripted if the agent is unreachable, so the share
+ * never shows a dead "Start call".
+ */
+const FORCE_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
 
 /**
  * Test Mello — talk to the REAL agent (brain + tools + booking engine) by chat
@@ -18,10 +27,10 @@ interface Msg {
 }
 
 const PERSONAS = [
-  { label: "Harshit (member)", phone: "+918369851507" },
-  { label: "Manan (member · Group 1)", phone: "+919653679703" },
-  { label: "Bitu (member · both groups)", phone: "+918976019902" },
-  { label: "New caller (non-member)", phone: "+919000000001" },
+  { label: "Harshit (member)", phone: "+918369851507", name: "Harshit", isMember: true },
+  { label: "Manan (member · Group 1)", phone: "+919653679703", name: "Manan", isMember: true, group: "Group 1" },
+  { label: "Bitu (member · both groups)", phone: "+918976019902", name: "Bitu", isMember: true, group: "Group 1" },
+  { label: "New caller (non-member)", phone: "+919000000001", name: "", isMember: false },
 ];
 
 export default function TestPage() {
@@ -33,10 +42,17 @@ export default function TestPage() {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
+  const [demo, setDemo] = useState(FORCE_DEMO);
   const sessionId = useRef<string>("");
   const recognitionRef = useRef<unknown>(null);
+  const demoState = useRef<DemoState | null>(null);
   const voiceOnRef = useRef(true);
   voiceOnRef.current = voiceOn;
+
+  function personaObj() {
+    const p = PERSONAS.find((x) => x.phone === persona) ?? PERSONAS[0];
+    return { name: p.name, isMember: p.isMember, group: p.group };
+  }
 
   function playAudio(base64: string | null) {
     if (!base64) return;
@@ -58,18 +74,31 @@ export default function TestPage() {
 
   /** Fetch + play Mello's voice for already-shown text, in the background. */
   function speak(text: string) {
-    if (!voiceOnRef.current || !text) return;
+    if (demo || !voiceOnRef.current || !text) return; // no TTS offline
     void call("speak", { text }).then((d) => playAudio(d.audio));
   }
 
+  /** Begin a scripted demo session (no backend). */
+  function startDemo() {
+    const p = personaObj();
+    demoState.current = { persona: p, step: "greeted" };
+    setDemo(true);
+    setStarted(true);
+    setError(null);
+    setMessages([{ role: "mello", text: demoGreeting(p) }]);
+  }
+
   async function start() {
-    setBusy(true);
     setError(null);
     setMessages([]);
+    if (FORCE_DEMO) return startDemo();
+    setBusy(true);
     sessionId.current = `dash-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     // withAudio:false → text comes back without waiting on TTS; voice loads after.
     const data = await call("start", { sessionId: sessionId.current, callerPhone: persona, withAudio: false });
     setBusy(false);
+    // Agent not running (e.g. public share) → fall back to the scripted demo.
+    if (data.error === "agent_unreachable") return startDemo();
     if (data.error) return setError(humanError(data));
     setStarted(true);
     setMessages([{ role: "mello", text: data.reply }]);
@@ -81,6 +110,13 @@ export default function TestPage() {
     if (!t || busy) return;
     setInput("");
     setMessages((m) => [...m, { role: "you", text: t }]);
+
+    if (demo && demoState.current) {
+      const reply = demoReply(demoState.current, t);
+      setMessages((m) => [...m, { role: "mello", text: reply }]);
+      return;
+    }
+
     setBusy(true);
     const data = await call("message", { sessionId: sessionId.current, text: t, withAudio: false });
     setBusy(false);
@@ -122,10 +158,27 @@ export default function TestPage() {
     <>
       <header className="mb-5 flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-[30px] font-semibold tracking-tightest text-ink">Test Mello</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-display text-[30px] font-semibold tracking-tightest text-ink">Test Mello</h1>
+            {demo && (
+              <span className="rounded-full border border-line bg-paper-raised px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+                Demo
+              </span>
+            )}
+          </div>
           <p className="mt-1.5 text-[14px] text-ink-muted">
-            Talk to the real agent by chat or mic. Every turn is saved to your database — it&rsquo;ll appear under{" "}
-            <span className="font-semibold text-ink">Calls</span>, and a confirmed booking sends the WhatsApp message.
+            {demo ? (
+              <>
+                Scripted preview of the booking flow — try{" "}
+                <em>&ldquo;kal 8 baje badminton book karna hai&rdquo;</em>. In the live product every turn runs the real
+                agent and saves to your dashboard.
+              </>
+            ) : (
+              <>
+                Talk to the real agent by chat or mic. Every turn is saved to your database — it&rsquo;ll appear under{" "}
+                <span className="font-semibold text-ink">Calls</span>, and a confirmed booking sends the WhatsApp message.
+              </>
+            )}
           </p>
         </div>
       </header>
@@ -146,17 +199,19 @@ export default function TestPage() {
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={() => setVoiceOn((v) => !v)}
-            title={voiceOn ? "Voice on — click to mute" : "Muted — click for voice"}
-            className={cn(
-              "rounded-lg border px-2.5 py-1.5 text-[13px] font-semibold transition-colors",
-              voiceOn ? "border-line text-ink hover:bg-ink/[0.04]" : "border-line text-ink-muted",
-            )}
-          >
-            {voiceOn ? "🔊 Voice" : "🔇 Muted"}
-          </button>
+          {!demo && (
+            <button
+              type="button"
+              onClick={() => setVoiceOn((v) => !v)}
+              title={voiceOn ? "Voice on — click to mute" : "Muted — click for voice"}
+              className={cn(
+                "rounded-lg border px-2.5 py-1.5 text-[13px] font-semibold transition-colors",
+                voiceOn ? "border-line text-ink hover:bg-ink/[0.04]" : "border-line text-ink-muted",
+              )}
+            >
+              {voiceOn ? "🔊 Voice" : "🔇 Muted"}
+            </button>
+          )}
           <div className="ml-auto">
             {!started ? (
               <button
@@ -171,6 +226,8 @@ export default function TestPage() {
                 onClick={() => {
                   setStarted(false);
                   setMessages([]);
+                  demoState.current = null;
+                  setDemo(FORCE_DEMO);
                 }}
                 className="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink"
               >
@@ -251,7 +308,11 @@ export default function TestPage() {
       </div>
 
       <p className="mx-auto mt-3 max-w-[760px] text-center text-[12px] text-ink-muted">
-        {listening ? "🎙 Listening… speak now" : "Mic uses your browser's speech-to-text. Needs the agent server running on :8080."}
+        {listening
+          ? "🎙 Listening… speak now"
+          : demo
+            ? "Scripted preview — no audio. The live product replies in Mello's real voice."
+            : "Mic uses your browser's speech-to-text. Needs the agent server running on :8080."}
       </p>
     </>
   );

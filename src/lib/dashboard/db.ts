@@ -17,8 +17,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const url = process.env.SUPABASE_URL?.trim();
 const serviceKey = process.env.SUPABASE_SERVICE_KEY?.trim();
 
+// Public demo share: never touch real Supabase — always serve the built-in seed.
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+
 export const db: SupabaseClient | null =
-  url && serviceKey ? createClient(url, serviceKey, { auth: { persistSession: false } }) : null;
+  !demoMode && url && serviceKey ? createClient(url, serviceKey, { auth: { persistSession: false } }) : null;
 
 export const dbConfigured = Boolean(db);
 
