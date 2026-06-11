@@ -11,27 +11,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Theme-driven tokens (channel vars in globals.css → flip per [data-theme]).
+        // Light values are identical to the originals, so the marketing site is
+        // visually unchanged; only the dashboard subtree re-themes.
         ink: {
-          DEFAULT: "#181A15", // primary text, dark UI on paper
-          muted: "#5C5F54", // secondary text
+          DEFAULT: "rgb(var(--c-ink) / <alpha-value>)", // primary text
+          muted: "rgb(var(--c-ink-muted) / <alpha-value>)", // secondary text
         },
         paper: {
-          DEFAULT: "#F5F3EE", // page background (warm bone)
-          raised: "#FBFAF7", // cards/surfaces on paper
+          DEFAULT: "rgb(var(--c-paper) / <alpha-value>)", // page background
+          raised: "rgb(var(--c-paper-raised) / <alpha-value>)", // cards/surfaces
+          hover: "rgb(var(--c-paper-hover) / <alpha-value>)", // hover surface
         },
-        line: "#E5E2D9", // borders / dividers (light)
+        line: "rgb(var(--c-line) / <alpha-value>)", // borders / dividers
+        // Stage stays always-dark (marketing dark sections + the live rail).
         stage: {
-          DEFAULT: "#0D100C", // dark section bg (warm near-black)
-          raised: "#161A14", // cards on dark
+          DEFAULT: "#0D100C",
+          raised: "#161A14",
         },
-        "on-stage": "#ECEFE8", // text on dark
+        "on-stage": "#ECEFE8",
         green: {
-          DEFAULT: "#0E7C45", // primary brand / CTA / "available"
-          press: "#0B6238", // pressed / hover-deep
+          DEFAULT: "rgb(var(--c-green) / <alpha-value>)", // brand / CTA / "available"
+          press: "rgb(var(--c-green-press) / <alpha-value>)",
         },
-        signal: "#36DD83", // "live / answered / confirmed" pulses & glows
-        "on-green": "#F4FFF8", // text on green
-        danger: "#C5462F", // "missed call" — used once, sparingly
+        signal: "rgb(var(--c-signal) / <alpha-value>)", // live/answered pulses
+        amber: "rgb(var(--c-amber) / <alpha-value>)", // secondary accent (resolved / play / money)
+        "on-green": "rgb(var(--c-on-green) / <alpha-value>)",
+        danger: "rgb(var(--c-danger) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],

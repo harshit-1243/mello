@@ -1,6 +1,21 @@
 import "server-only";
 import { db, FACILITY_ID } from "./db";
-import type { CallRow, CallDetail, CallStatus, BookingRow, MemberRow, GroupRow, ToolCallEntry } from "./data";
+import type {
+  CallRow,
+  CallDetail,
+  CallStatus,
+  BookingRow,
+  MemberRow,
+  GroupRow,
+  ToolCallEntry,
+  Overview,
+  OverviewStats,
+  CallSummary,
+  UpcomingBooking,
+  LiveCall,
+  SettingsView,
+  ReportData,
+} from "./data";
 
 /**
  * Live Supabase loaders for the dashboard read-path.
@@ -236,6 +251,316 @@ export async function loadMembers(): Promise<{ members: MemberRow[]; groups: Gro
           .filter((x) => x.group_id === g.id)
           .map((x) => phoneToName.get(x.member_phone as string) ?? (x.member_phone as string)),
       })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- overview --------------------------------------------------------------
+
+/** "08:00" → "8:00 AM", "24:00" → "12:00 AM". Always shows minutes. */
+function hhmm12(t: string): string {
+  const [h, m] = t.split(":").map((x) => parseInt(x, 10));
+  const ampm = h >= 12 && h < 24 ? "PM" : "AM";
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m || 0).padStart(2, "0")} ${ampm}`;
+}
+
+interface FacilityRow {
+  name: string;
+  city: string | null;
+  open_time: string;
+  close_time: string;
+  config: Record<string, unknown> | null;
+}
+
+async function loadFacility(): Promise<FacilityRow | null> {
+  if (!db) return null;
+  const { data } = await db
+    .from("facilities")
+    .select("name, city, open_time, close_time, config")
+    .eq("id", FACILITY_ID)
+    .maybeSingle();
+  return (data as FacilityRow) ?? null;
+}
+
+export async function loadOverview(): Promise<Overview | null> {
+  if (!db) return null;
+  try {
+    const facility = await loadFacility();
+    if (!facility) return null;
+
+    const today = todayIST();
+    const dayStart = `${today}T00:00:00`;
+    const names = await memberNameMap();
+
+    // Today's calls.
+    const { data: calls } = await db
+      .from("call_logs")
+      .select("id, caller_phone, is_member, started_at, ended_at, outcome")
+      .eq("facility_id", FACILITY_ID)
+      .gte("started_at", dayStart)
+      .order("started_at", { ascending: false });
+    const callRows = calls ?? [];
+
+    const callsToday = callRows.length;
+    let answered = 0;
+    for (const c of callRows) {
+      const dur = c.ended_at ? (Date.parse(c.ended_at) - Date.parse(c.started_at)) / 1000 : 0;
+      if (statusFromOutcome(c.outcome ?? null, dur > 8) !== "missed") answered++;
+    }
+    const answerRatePct = callsToday ? Math.round((answered / callsToday) * 100) : 0;
+
+    const recentCalls: CallSummary[] = callRows.slice(0, 5).map((c): CallSummary => {
+      const dur = c.ended_at ? (Date.parse(c.ended_at) - Date.parse(c.started_at)) / 1000 : 0;
+      return {
+        id: c.id as string,
+        phone: c.caller_phone ?? "",
+        summary: (c.outcome as string) || "—",
+        status: statusFromOutcome(c.outcome ?? null, dur > 8),
+        at: c.started_at as string,
+      };
+    });
+
+    // Bookings made today (for the stat cards).
+    const { data: madeToday } = await db
+      .from("bookings")
+      .select("sport, start_time, end_time, booked_by_phone, basketball_mode, source")
+      .eq("facility_id", FACILITY_ID)
+      .eq("source", "mello")
+      .gte("created_at", dayStart);
+    const made = madeToday ?? [];
+    let bookingsMember = 0;
+    let revenueBookedInr = 0;
+    for (const b of made) {
+      const isMember = names.has(b.booked_by_phone ?? "");
+      if (isMember) bookingsMember++;
+      else
+        revenueBookedInr += bookingAmount(
+          b.sport as string,
+          b.start_time as string,
+          b.end_time as string,
+          false,
+          b.basketball_mode as string | null,
+        );
+    }
+    const stats: OverviewStats = {
+      callsToday,
+      answered,
+      answerRatePct,
+      bookingsMade: made.length,
+      bookingsMember,
+      revenueBookedInr,
+    };
+
+    // Upcoming bookings (today onward).
+    const { data: up } = await db
+      .from("bookings")
+      .select("id, sport, court_id, booking_date, start_time, booked_by_name, source")
+      .eq("facility_id", FACILITY_ID)
+      .gte("booking_date", today)
+      .order("booking_date")
+      .order("start_time")
+      .limit(6);
+    const upcoming: UpcomingBooking[] = (up ?? []).map((b): UpcomingBooking => {
+      const dl = dateLabel(b.booking_date as string);
+      const start = clock12(b.start_time as string);
+      return {
+        id: b.id as string,
+        when: dl === "Today" ? start : `${dl} ${start}`,
+        sport: cap(b.sport as string),
+        who: (b.booked_by_name as string) || (b.source === "mello" ? "—" : `${cap(b.source as string)} booking`),
+        court: courtLabel(b.court_id as string),
+      };
+    });
+
+    // A live (in-progress) call = started, not yet ended.
+    let live: LiveCall | null = null;
+    const { data: liveRows } = await db
+      .from("call_logs")
+      .select("id, caller_phone, is_member, started_at, outcome")
+      .eq("facility_id", FACILITY_ID)
+      .is("ended_at", null)
+      .gte("started_at", dayStart)
+      .order("started_at", { ascending: false })
+      .limit(1);
+    const lc = liveRows?.[0];
+    if (lc) {
+      const { data: lastLine } = await db
+        .from("transcripts")
+        .select("content")
+        .eq("call_id", lc.id as string)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      live = {
+        phone: lc.caller_phone ?? "",
+        name: names.get(lc.caller_phone ?? ""),
+        detail: `${lc.is_member ? "Member" : "Caller"} · ${(lc.outcome as string) || "in progress"}`,
+        lastLine: (lastLine?.[0]?.content as string) || "…",
+        elapsedSeconds: Math.max(0, Math.round((Date.now() - Date.parse(lc.started_at as string)) / 1000)),
+      };
+    }
+
+    return {
+      facilityName: facility.name,
+      facilityCity: facility.city ?? "",
+      hoursLabel: `${hhmm12(facility.open_time)} – ${hhmm12(facility.close_time)}`,
+      live,
+      stats,
+      recentCalls,
+      upcoming,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- settings --------------------------------------------------------------
+
+function inr(n: number): string {
+  return `₹${n.toLocaleString("en-IN")}`;
+}
+
+export async function loadSettings(): Promise<SettingsView | null> {
+  if (!db) return null;
+  try {
+    const facility = await loadFacility();
+    if (!facility) return null;
+    const cfg = (facility.config ?? {}) as Record<string, unknown>;
+
+    // Sports + pricing from the config snapshot.
+    const rawSports = Array.isArray(cfg.sports) ? (cfg.sports as Record<string, unknown>[]) : [];
+    const sports = rawSports.map((s) => {
+      const courts = Array.isArray(s.courts) ? (s.courts as unknown[]).length : 0;
+      const p = (s.pricing_per_hour_inr ?? {}) as Record<string, number>;
+      const priceLabel =
+        s.id === "basketball"
+          ? `${inr(p.full_non_member ?? 0)}/hr full · ${inr(p.half_non_member ?? 0)} half`
+          : `${inr(p.non_member ?? 0)}/hr`;
+      return { name: (s.name as string) ?? cap((s.id as string) ?? ""), courts, priceLabel };
+    });
+
+    // Member-only windows.
+    const rawWindows = Array.isArray(cfg.member_only_windows) ? (cfg.member_only_windows as Record<string, unknown>[]) : [];
+    const memberWindows = rawWindows.map((w) => {
+      const days = Array.isArray(w.weekdays) ? (w.weekdays as unknown[]).length : 0;
+      const label = days >= 7 ? "all days" : `${days} days`;
+      return `${hhmm12(w.start as string)}–${hhmm12(w.end as string)} (${label})`;
+    });
+
+    const privacy = (cfg.privacy_rules ?? {}) as Record<string, number>;
+    const facilityCfg = (cfg.facility ?? {}) as Record<string, string>;
+    const twilioNumber = facilityCfg.twilio_number ?? "";
+    const twilioLive = twilioNumber.startsWith("+");
+
+    return {
+      facilityName: facility.name,
+      city: facility.city ?? "",
+      hoursLabel: `${hhmm12(facility.open_time)} – ${hhmm12(facility.close_time)}`,
+      sports,
+      memberWindows,
+      integrations: [
+        {
+          label: "Phone (Twilio)",
+          status: twilioLive ? "connected" : "not_connected",
+          detail: twilioLive ? twilioNumber : "KYC pending",
+        },
+        { label: "WhatsApp (Meta)", status: "not_connected", detail: "Add token to go live" },
+        { label: "Payments", status: "not_connected", detail: "Add your provider key" },
+        { label: "Database (Supabase)", status: "connected", detail: "Persisting calls & bookings" },
+      ],
+      privacy: {
+        audioSeconds: privacy.audio_retention_seconds ?? 60,
+        transcriptDays: privacy.transcript_retention_days ?? 90,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- reports ---------------------------------------------------------------
+
+/** Hour-of-day (0–23) in IST for an ISO timestamp. */
+function istHour(iso: string): number {
+  const h = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }).format(
+    new Date(iso),
+  );
+  return parseInt(h, 10) % 24;
+}
+
+export async function loadReports(): Promise<ReportData | null> {
+  if (!db) return null;
+  try {
+    const facility = await loadFacility();
+    if (!facility) return null;
+
+    const periodDays = 30;
+    const since = new Date(Date.now() - periodDays * 86_400_000).toISOString();
+    const openHour = parseInt((facility.open_time || "08:00").split(":")[0], 10);
+    const closeHour = parseInt((facility.close_time || "24:00").split(":")[0], 10);
+    const names = await memberNameMap();
+
+    // Calls in the period.
+    const { data: calls } = await db
+      .from("call_logs")
+      .select("started_at, ended_at, outcome")
+      .eq("facility_id", FACILITY_ID)
+      .gte("started_at", since);
+    const callRows = calls ?? [];
+    let answered = 0;
+    let afterHoursCalls = 0;
+    for (const c of callRows) {
+      const dur = c.ended_at ? (Date.parse(c.ended_at) - Date.parse(c.started_at)) / 1000 : 0;
+      if (statusFromOutcome(c.outcome ?? null, dur > 8) !== "missed") answered++;
+      const hr = istHour(c.started_at as string);
+      if (hr < openHour || hr >= closeHour) afterHoursCalls++;
+    }
+
+    // Bookings in the period (Mello-made).
+    const { data: bookings } = await db
+      .from("bookings")
+      .select("sport, start_time, end_time, booked_by_phone, basketball_mode, created_at")
+      .eq("facility_id", FACILITY_ID)
+      .eq("source", "mello")
+      .gte("created_at", since);
+    const bk = bookings ?? [];
+
+    const sportCounts = new Map<string, number>();
+    const hourCounts = new Map<number, number>();
+    let member = 0;
+    let nonMember = 0;
+    let revenueInr = 0;
+    for (const b of bk) {
+      const sport = cap(b.sport as string);
+      sportCounts.set(sport, (sportCounts.get(sport) ?? 0) + 1);
+      const hr = parseInt((b.start_time as string).split(":")[0], 10);
+      hourCounts.set(hr, (hourCounts.get(hr) ?? 0) + 1);
+      const isMember = names.has(b.booked_by_phone ?? "");
+      if (isMember) member++;
+      else {
+        nonMember++;
+        revenueInr += bookingAmount(b.sport as string, b.start_time as string, b.end_time as string, false, b.basketball_mode as string | null);
+      }
+    }
+
+    const cfg = (facility.config ?? {}) as Record<string, unknown>;
+    const baselineRaw = (cfg.baseline ?? null) as { missed_per_month?: number } | null;
+
+    return {
+      periodDays,
+      calls: callRows.length,
+      answered,
+      answerRatePct: callRows.length ? Math.round((answered / callRows.length) * 100) : 0,
+      bookings: bk.length,
+      conversionPct: callRows.length ? Math.round((bk.length / callRows.length) * 100) : 0,
+      revenueInr,
+      afterHoursCalls,
+      byHour: [...hourCounts.entries()].sort((a, b) => a[0] - b[0]).map(([hour, count]) => ({ hour, count })),
+      bySport: [...sportCounts.entries()].sort((a, b) => b[1] - a[1]).map(([sport, count]) => ({ sport, count })),
+      memberMix: { member, nonMember },
+      baseline: baselineRaw?.missed_per_month ? { missedPerMonth: baselineRaw.missed_per_month } : null,
     };
   } catch {
     return null;

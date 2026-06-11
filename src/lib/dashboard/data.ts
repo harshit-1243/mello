@@ -10,7 +10,14 @@
  * (`./live`) and fall back to the seed below when the DB is unconfigured/empty.
  */
 
-import { loadCalls, loadCall, loadBookings, loadMembers } from "./live";
+import { loadCalls, loadCall, loadBookings, loadMembers, loadOverview, loadSettings, loadReports } from "./live";
+
+/**
+ * Pre-launch the dashboard shows the rich DEMO seed below so it always looks
+ * alive (there's no real facility data yet). Set DASHBOARD_LIVE=1 to read live
+ * Supabase (with seed fallback) once a real facility is connected.
+ */
+const USE_LIVE = process.env.DASHBOARD_LIVE === "1";
 
 export type CallStatus = "booked" | "handled" | "missed";
 
@@ -43,10 +50,8 @@ export interface OverviewStats {
   answered: number;
   answerRatePct: number;
   bookingsMade: number;
-  bookingsPaid: number;
   bookingsMember: number;
   revenueBookedInr: number;
-  payAtVenueInr: number;
 }
 
 export interface Overview {
@@ -59,10 +64,13 @@ export interface Overview {
   upcoming: UpcomingBooking[];
 }
 
-/** Seeded overview — mirrors the demo facility (Raheja Ileseum). */
+/** Overview — live Supabase when configured, else the demo seed below. */
 export async function getOverview(): Promise<Overview> {
-  // TODO(Step 10.2): if dbConfigured, query Supabase scoped to the signed-in
-  // facility and map rows into this shape. Falls back to this seed otherwise.
+  return USE_LIVE ? (await loadOverview()) ?? seedOverview() : seedOverview();
+}
+
+/** Seeded overview — mirrors the demo facility (Raheja Ileseum). */
+function seedOverview(): Overview {
   return {
     facilityName: "Raheja Ileseum",
     facilityCity: "Mumbai",
@@ -79,10 +87,8 @@ export async function getOverview(): Promise<Overview> {
       answered: 22,
       answerRatePct: 92,
       bookingsMade: 6,
-      bookingsPaid: 5,
       bookingsMember: 1,
       revenueBookedInr: 3600,
-      payAtVenueInr: 1800,
     },
     recentCalls: [
       { id: "c1", phone: "+919876512345", summary: "Badminton · tomorrow 8 PM", status: "booked", at: iso(-3) },
@@ -268,11 +274,13 @@ const CALLS: CallDetail[] = [
 ];
 
 export async function getCalls(): Promise<CallRow[]> {
-  return (await loadCalls()) ?? CALLS.map(({ transcript, toolCalls, booking, ...row }) => row);
+  const seed = () => CALLS.map(({ transcript, toolCalls, booking, ...row }) => row);
+  return USE_LIVE ? (await loadCalls()) ?? seed() : seed();
 }
 
 export async function getCall(id: string): Promise<CallDetail | null> {
-  return (await loadCall(id)) ?? CALLS.find((c) => c.id === id) ?? null;
+  const seed = () => CALLS.find((c) => c.id === id) ?? null;
+  return USE_LIVE ? (await loadCall(id)) ?? seed() : seed();
 }
 
 // ===========================================================================
@@ -305,7 +313,8 @@ const BOOKINGS_PAST: BookingRow[] = [
 ];
 
 export async function getBookings(): Promise<{ upcoming: BookingRow[]; past: BookingRow[] }> {
-  return (await loadBookings()) ?? { upcoming: BOOKINGS_UPCOMING, past: BOOKINGS_PAST };
+  const seed = { upcoming: BOOKINGS_UPCOMING, past: BOOKINGS_PAST };
+  return USE_LIVE ? (await loadBookings()) ?? seed : seed;
 }
 
 // ===========================================================================
@@ -326,7 +335,7 @@ export interface GroupRow {
 }
 
 export async function getMembers(): Promise<{ members: MemberRow[]; groups: GroupRow[] }> {
-  return (await loadMembers()) ?? SEED_MEMBERS;
+  return USE_LIVE ? (await loadMembers()) ?? SEED_MEMBERS : SEED_MEMBERS;
 }
 
 const SEED_MEMBERS: { members: MemberRow[]; groups: GroupRow[] } = {
@@ -358,7 +367,10 @@ export interface SettingsView {
 }
 
 export async function getSettings(): Promise<SettingsView> {
-  // TODO(Step 10.2): hydrate from the facility's config row + connected creds.
+  return USE_LIVE ? (await loadSettings()) ?? seedSettings() : seedSettings();
+}
+
+function seedSettings(): SettingsView {
   return {
     facilityName: "Raheja Ileseum",
     city: "Mumbai",
@@ -377,5 +389,57 @@ export async function getSettings(): Promise<SettingsView> {
       { label: "Database (Supabase)", status: "connected", detail: "Persisting calls & bookings" },
     ],
     privacy: { audioSeconds: 60, transcriptDays: 90 },
+  };
+}
+
+// ===========================================================================
+// Reports — real, derivable analytics (no fabricated metrics, no price refs)
+// ===========================================================================
+
+export interface ReportData {
+  periodDays: number;
+  calls: number;
+  answered: number;
+  answerRatePct: number;
+  bookings: number;
+  conversionPct: number; // bookings ÷ calls
+  revenueInr: number; // non-member ₹ booked in the period
+  afterHoursCalls: number; // calls outside facility open hours = recovered
+  byHour: { hour: number; count: number }[]; // bookings by start hour (0–23)
+  bySport: { sport: string; count: number }[];
+  memberMix: { member: number; nonMember: number };
+  /** Pre-Mello baseline — null until the facility provides it (lights up the
+   *  before/after comparison). Sourced at onboarding, not assumed. */
+  baseline: { missedPerMonth: number } | null;
+}
+
+export async function getReports(): Promise<ReportData> {
+  return USE_LIVE ? (await loadReports()) ?? seedReports() : seedReports();
+}
+
+function seedReports(): ReportData {
+  return {
+    periodDays: 30,
+    calls: 642,
+    answered: 597,
+    answerRatePct: 93,
+    bookings: 421,
+    conversionPct: 66,
+    revenueInr: 184200,
+    afterHoursCalls: 138,
+    byHour: [
+      { hour: 8, count: 9 }, { hour: 9, count: 14 }, { hour: 10, count: 11 }, { hour: 11, count: 8 },
+      { hour: 12, count: 6 }, { hour: 13, count: 7 }, { hour: 14, count: 9 }, { hour: 15, count: 12 },
+      { hour: 16, count: 18 }, { hour: 17, count: 27 }, { hour: 18, count: 41 }, { hour: 19, count: 46 },
+      { hour: 20, count: 38 }, { hour: 21, count: 24 }, { hour: 22, count: 13 }, { hour: 23, count: 7 },
+    ],
+    bySport: [
+      { sport: "Badminton", count: 198 },
+      { sport: "Pickleball", count: 96 },
+      { sport: "Tennis", count: 71 },
+      { sport: "Basketball", count: 56 },
+    ],
+    memberMix: { member: 156, nonMember: 265 },
+    baseline: { missedPerMonth: 180 },
   };
 }

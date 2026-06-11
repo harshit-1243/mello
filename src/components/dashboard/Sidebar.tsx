@@ -16,7 +16,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/calls", label: "Calls", icon: <IconPhone /> },
   { href: "/dashboard/bookings", label: "Bookings", icon: <IconList /> },
   { href: "/dashboard/members", label: "Members", icon: <IconUsers /> },
-  { href: "/dashboard/test", label: "Test Mello", icon: <IconMic /> },
+  { href: "/dashboard/reports", label: "Reports", icon: <IconChart /> },
   { href: "/dashboard/settings", label: "Settings", icon: <IconGear /> },
 ];
 
@@ -92,11 +92,11 @@ function IconUsers() {
     </svg>
   );
 }
-function IconMic() {
+function IconChart() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0M12 17v4" />
+      <line x1="3" y1="21" x2="21" y2="21" /><rect x="6" y="11" width="3.2" height="7" rx="0.8" />
+      <rect x="13" y="6" width="3.2" height="12" rx="0.8" />
     </svg>
   );
 }

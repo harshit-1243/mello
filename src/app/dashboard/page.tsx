@@ -24,18 +24,18 @@ export default async function OverviewPage() {
       </header>
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Calls today" value={String(stats.callsToday)} note="▲ 18% vs last Sun" />
+        <StatCard label="Calls today" value={String(stats.callsToday)} note={`${stats.answered} answered`} />
         <StatCard label="Answered" value={String(stats.answered)} note={`${stats.answerRatePct}% answer rate`} />
         <StatCard
           label="Bookings made"
           value={String(stats.bookingsMade)}
-          note={`${stats.bookingsPaid} paid · ${stats.bookingsMember} member`}
+          note={`${stats.bookingsMade - stats.bookingsMember} non-member · ${stats.bookingsMember} member`}
         />
         <StatCard
           label="Revenue booked"
           value={rupees(stats.revenueBookedInr)}
-          note={`pay-at-venue ${rupees(stats.payAtVenueInr)}`}
-          noteTone="muted"
+          note={`${stats.bookingsMade - stats.bookingsMember} to collect`}
+          noteTone="amber"
         />
       </div>
 

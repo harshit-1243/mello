@@ -7,10 +7,12 @@
  * for hand-written CSS: glows, gradients, the waveform.
  * ------------------------------------------------------------------ */
 :root {
+  /* Full-colour tokens — consumed by hand-written CSS (glows, waveform, grain). */
   --ink: #181a15;
   --ink-muted: #5c5f54;
   --paper: #f5f3ee;
   --paper-raised: #fbfaf7;
+  --paper-hover: #f0eee7;
   --line: #e5e2d9;
   --stage: #0d100c;
   --stage-raised: #161a14;
@@ -21,8 +23,87 @@
   --on-green: #f4fff8;
   --danger: #c5462f;
 
+  /* Channel tokens (R G B) — consumed by Tailwind colour utilities so opacity
+     modifiers work and [data-theme] can re-theme the dashboard. Light values. */
+  --c-ink: 24 26 21;
+  --c-ink-muted: 92 95 84;
+  --c-paper: 245 243 238;
+  --c-paper-raised: 251 250 247;
+  --c-paper-hover: 240 238 231;
+  --c-line: 229 226 217;
+  --c-green: 14 124 69;
+  --c-green-press: 11 98 56;
+  --c-signal: 54 221 131;
+  --c-amber: 196 125 42;
+  --c-on-green: 244 255 248;
+  --c-danger: 197 70 47;
+  --amber: #c47d2a;
+
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --focus: var(--green);
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dashboard dark theme ("command center"). Scoped to [data-theme="dark"]
+ * (set on the dashboard root only) so the marketing site is untouched.
+ * Same semantic tokens → flipping these recolours the whole dashboard.
+ * ------------------------------------------------------------------ */
+[data-theme="dark"] {
+  /* full-colour (hand CSS + base border fallback) */
+  --ink: #e8f0ea;
+  --ink-muted: #8fa898;
+  --paper: #0d1a0f;
+  --paper-raised: #161e19;
+  --paper-hover: #1c2820;
+  --line: #2a3224;
+  --green: #3dbe72;
+  --green-press: #34a763;
+  --signal: #3dffa0;
+  --amber: #e8a44e;
+  --on-green: #04130a;
+  --danger: #e8674e;
+  /* channel (Tailwind utilities) */
+  --c-ink: 232 240 234;
+  --c-ink-muted: 143 168 152;
+  --c-paper: 13 26 15;
+  --c-paper-raised: 22 30 25;
+  --c-paper-hover: 28 40 32;
+  --c-line: 42 50 36;
+  --c-green: 61 190 114;
+  --c-green-press: 52 167 99;
+  --c-signal: 61 255 160;
+  --c-amber: 232 164 78;
+  --c-on-green: 4 19 10;
+  --c-danger: 232 103 78;
+
+  color-scheme: dark;
+}
+
+/* Dashboard light theme — its own greener light surface (distinct from the
+ * marketing paper). Also scoped to the dashboard root via [data-theme]. */
+[data-theme="light"] {
+  --ink: #0d1a0f;
+  --ink-muted: #3d5a47;
+  --paper: #f4f7f5;
+  --paper-raised: #ffffff;
+  --paper-hover: #f0f5f2;
+  --line: #e0e6e2;
+  --green: #1f8a47;
+  --green-press: #186e39;
+  --on-green: #f4fff8;
+  --c-ink: 13 26 15;
+  --c-ink-muted: 61 90 71;
+  --c-paper: 244 247 245;
+  --c-paper-raised: 255 255 255;
+  --c-paper-hover: 240 245 242;
+  --c-line: 224 230 226;
+  --c-green: 31 138 71;
+  --c-green-press: 24 110 57;
+  --c-signal: 54 221 131;
+  --c-amber: 184 110 32;
+  --c-on-green: 244 255 248;
 
   color-scheme: light;
 }

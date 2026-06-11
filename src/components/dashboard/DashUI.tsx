@@ -12,17 +12,15 @@ export function StatCard({
   label: string;
   value: string;
   note?: string;
-  noteTone?: "green" | "muted";
+  noteTone?: "green" | "muted" | "amber";
 }) {
+  const noteColor =
+    noteTone === "green" ? "text-green" : noteTone === "amber" ? "text-amber" : "text-ink-muted";
   return (
     <div className="rounded-2xl border border-line bg-paper-raised p-5 shadow-soft">
-      <div className="text-[12.5px] font-medium text-ink-muted">{label}</div>
+      <div className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{label}</div>
       <div className="tabular mt-2.5 text-[34px] font-semibold tracking-[-0.03em] text-ink">{value}</div>
-      {note && (
-        <div className={cn("mt-1.5 text-[12.5px] font-semibold", noteTone === "green" ? "text-green" : "text-ink-muted")}>
-          {note}
-        </div>
-      )}
+      {note && <div className={cn("mt-1.5 text-[12.5px] font-semibold", noteColor)}>{note}</div>}
     </div>
   );
 }
@@ -53,11 +51,11 @@ export function Panel({
 }
 
 const TAG_STYLES: Record<CallStatus, string> = {
-  booked: "bg-green/[0.13] text-green",
-  handled: "bg-green/[0.13] text-green",
+  booked: "bg-green/[0.14] text-green",
+  handled: "bg-amber/[0.15] text-amber",
   missed: "bg-danger/[0.12] text-danger",
 };
-const TAG_LABEL: Record<CallStatus, string> = { booked: "Booked ✓", handled: "Handled", missed: "Missed" };
+const TAG_LABEL: Record<CallStatus, string> = { booked: "Booked ✓", handled: "Resolved", missed: "Missed" };
 
 export function StatusTag({ status }: { status: CallStatus }) {
   return (
