@@ -50,7 +50,7 @@ models from **Sarvam** (STT `saaras` streaming, LLM `sarvam-105b`, TTS `bulbul:v
 - See `agent/server/README.md` for full details.
 
 ### Pending
-- **Step 10 (NEXT):** facility owner dashboard (login, see calls/transcripts/bookings, delete). **Step 11:** learning loop.
+- **Step 10.3 (NEXT):** dashboard auth — Supabase magic-link + per-facility RLS (dashboard is currently OPEN). 10.1 (pages) + 10.2 (live data) ✅ DONE. **Step 11:** learning loop.
 - Step 9 ✅ done (WhatsApp confirmation + Razorpay link, graceful stubs). Needs WhatsApp + Razorpay creds in `.env.local` to actually send/charge.
 - **Twilio number** — KYC pending; blocks the live PHONE demo (test console works now).
 - Logo (user prefers streetwear / Jordan Jumpman energy, NOT abstract painting NOT M-monogram)
@@ -75,6 +75,10 @@ These were debated and decided. Don't reopen unless user asks:
 11. **LLM brain = Sarvam, not OpenAI.** Sarvam's chat API (`sarvam-30b` / `sarvam-105b`, legacy `sarvam-m`) is OpenAI-compatible and supports `tools` / `tool_choice` function calling — confirmed in the SDK types. Chosen over OpenAI because: one vendor (already signed up, free tier, one key), Indian-built so stronger on Hindi/Indic + code-switching (the moat), and data stays in India (aligns with privacy decision #3). OpenAI account stays as a fallback only. Default `sarvam-105b` + reasoning=medium (30B was slower AND off-persona in testing).
 12. **"Learning from calls" is a DATA PIPELINE, not live model training.** We use a hosted LLM (Sarvam) — you can't retrain it per call. The privacy rule grants the RIGHT to use this-facility data; the mechanism is: store (Step 7) → improve prompt/examples/memory (Step 11) → optional fine-tune later. Don't promise "the model learns on every call" literally.
 13. **LiveKit vs Sarvam is NOT either/or — different layers.** Sarvam = the models (STT/LLM/TTS). LiveKit = real-time orchestration/plumbing (WebRTC, turn detection, barge-in) that USES providers like Sarvam. Voice quality is a TTS choice (Sarvam v3 ritu chosen — best for India/Hindi/data-residency), NOT something LiveKit fixes. LiveKit only helps the PLUMBING latency + adds barge-in; it can't speed up the LLM tool-call time (the biggest chunk). Decision: keep Sarvam+current stack for the demo; consider LiveKit for production polish later (it can still run Sarvam underneath).
+14. **Dashboard = "Dark command-center" + light toggle** (pivoted 2026-06-11 from "Hybrid"). Dark default. Palette: green primary + **amber** secondary + white numbers. Do NOT revert to all-light Hybrid. Theming is via channel CSS vars scoped to `#dash-root` — keep marketing site untouched.
+15. **Dashboard analytics = REAL metrics only, NO gimmicks, NO price references.** User explicitly rejected sentiment analysis, "Hindi accuracy", uptime %, and "Mello health" vanity stats. Also: NEVER show a subscription price (e.g. "for ₹4,999/mo") anywhere — **pricing is per-facility and will change** (see `payment-provider-swappable` memory). Show value as raw outcomes (revenue booked, missed calls recovered), never divided by a price.
+16. **Dashboard shows DEMO seed by default pre-launch** (`DASHBOARD_LIVE` env, default OFF) so it looks alive with no real facility. Live Supabase reads are fully wired and flip on with `DASHBOARD_LIVE=1`. Don't delete the live loaders — they're correct, just gated.
+17. **Audio is NEVER played back in the dashboard.** Audio isn't stored (60s destroy, decision #3). Any "waveform audio player" in a design mock is impossible/banned — transcripts only. (The animated waveform in the live rail is decorative CSS, not real audio.)
 
 ---
 
@@ -131,7 +135,8 @@ mello.ai/
 
 | Service | Status | Notes |
 |---|---|---|
-| Vercel | ✅ connected | auto-deploys from GitHub `main` |
+| Vercel (marketing) | ✅ connected | project `mello-omega`, auto-deploys from `main`; dashboard now at `/dashboard` |
+| Vercel (demo) | ✅ connected | project `mello-dashboard-demo`, tracks branch `dashboard-demo`, env `NEXT_PUBLIC_DEMO_MODE=1` — public seed-only dashboard share (OLD hybrid look until ported) |
 | GitHub | ✅ `harshit-1243/mello` | push triggers Vercel |
 | Calendly | ✅ live URL set | `connect2harshit123/30min` |
 | Twilio | ✅ signed up | **no Indian number bought yet — KYC pending** |
@@ -206,7 +211,13 @@ If any group member books sport X at time T, no other group member can book spor
 7. 🟡 **Supabase DB — capture layer DONE, read-path pending.** Schema `agent/server/db/schema.sql` (facilities, members, groups, group_members, bookings, call_logs, transcripts, tool_calls, audit_log; RLS enabled). DB client `src/db/client.ts`, persistence `src/db/persistence.ts` (call logs + transcripts + tool calls + audit — the LEARNING-LOOP capture layer), seed `src/db/seed.ts` (`npm run db:seed`). Wired into the agent (startSession/endSession, per-turn transcript + tool-call logging). **Graceful: no creds → in-memory seed, demo still works.** STILL TODO: swap the BookingEngine READ path (members/availability) from config.json to Supabase so bookings persist across calls; per-facility RLS policies (with Step 10 dashboard auth). Needs user's SUPABASE_URL + SERVICE_KEY.
 8. ✅ **5 privacy rules** — audio never persisted (stream-through only); transcripts 90-day TTL + `purgeExpiredTranscripts` (boot + daily, `src/db/persistence.ts`); audit_log wired (call_started, deletes, purges); per-facility isolation (facility_id + RLS); right-to-delete via `delete_my_data` tool (`deleteCallerData`) + `deleteFacilityData()` ready for the dashboard. Verified delete flow + audit entries live.
 9. ✅ **WhatsApp confirmation + Razorpay link** — `src/notify/` (whatsapp.ts, razorpay.ts, confirmation.ts). After a confirmed `create_booking`, the server fires a fire-and-forget WhatsApp confirmation (THE only place the court number appears — never spoken). `send_payment_link` now creates a real Razorpay Payment Link and delivers it over WhatsApp. Graceful: no `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → message is LOGGED not sent; no Razorpay keys → placeholder link. `engine.createBooking` now returns `amount` (members ₹0; non-members rate×hours, basketball full/half). Smoke-verified (₹600 badminton, ₹0 member tennis, ₹800 basketball half). Needs from user (NOT blocking): Meta WhatsApp token + phone-number-id (sandbox OK) and Razorpay test keys → paste into `.env.local`.
-10. 🟡 **IN PROGRESS** — Facility owner dashboard. Visual direction = **Hybrid** (dark live rail + light paper), chosen from 3 rendered mockups (`scripts/mockups/`). Lives in the Next app under `/dashboard` (nested layout, brand tokens; custom-cursor + Lenis disabled there via `usePathname`). **All pages BUILT on seed data:** Overview, Calls list, Call detail (transcript bubbles + tool-call trace + booking card w/ court + privacy delete), Bookings (upcoming/recent), Members (+ groups), Settings (facility/integrations/pricing/privacy). Data layer = `src/lib/dashboard/{data,format,live,db}.ts`. **10.2 PARTIALLY DONE:** `getCalls/getCall/getBookings/getMembers` now read live Supabase (`live.ts`) with seed fallback; `getOverview`+`getSettings` still seed-only. Added **Test Mello page** (`/dashboard/test`) — chat/mic → proxy (`/api/test/[action]`) → agent server's real `/test/*` (CallAgent) → persists to DB + fires WhatsApp. Both web + agent **typecheck clean**, all routes 200. Components in `src/components/dashboard/`. STILL TODO: finish 10.2 (overview/settings live), then (10.3) Supabase magic-link auth + per-facility RLS. Order locked by user: pages → Supabase → auth. **See `TESTING_NOTES.md`** for the full end-to-end test guide + the list of known rough edges.
+10. 🟡 **10.1 + 10.2 DONE, 10.3 (auth) NEXT** — Facility owner dashboard. Lives in the Next app under `/dashboard` (nested layout; custom-cursor + Lenis disabled there). **Pages:** Overview, Calls list, Call detail (transcript bubbles + tool-call trace + booking card w/ court + privacy delete), Bookings, Members, **Reports** (NEW), Settings. Data layer = `src/lib/dashboard/{data,format,live,db}.ts`.
+   - **VISUAL DIRECTION PIVOTED (2026-06-11): now "Dark command-center" with a light toggle** (was Hybrid). Default **dark**, sun/moon toggle top-right (no-flash, `localStorage` key `mello-theme`). Theme works via **channel CSS vars** (`--c-*` R G B) in `globals.css` → Tailwind tokens (`ink/paper/line/green/signal/amber/...`); `[data-theme="dark"|"light"]` set on **`#dash-root` only** (marketing site untouched). Palette: green primary + **amber** secondary (resolved/play/money) + white numbers. `stage`/`on-stage` stay hardcoded-dark (live rail). See memory `dashboard-direction.md`.
+   - **10.2 live data DONE:** `getOverview/getSettings/getReports/getCalls/getCall/getBookings/getMembers` all read live Supabase (`live.ts`) with seed fallback. BUT the dashboard **defaults to rich DEMO seed** (`USE_LIVE = process.env.DASHBOARD_LIVE === "1"` in `data.ts`, default OFF) because there's no real facility yet — set `DASHBOARD_LIVE=1` to read live. (The "paid vs pay-at-venue" stat was dropped — no backing column; replaced with member/non-member split.)
+   - **Reports page** (`/dashboard/reports`): real analytics only — call→booking conversion, after-hours calls caught, demand-by-hour, bookings-by-sport, member mix. **No gimmicks** (no sentiment/Hindi-accuracy/uptime) and **no price references** (pricing per-facility + changes). "Before vs after Mello" panel reads a baseline from `facilities.config.baseline.missed_per_month` (collected post-deal); demo seed sets it so the panel shows.
+   - **Test Mello REMOVED from the product** (deleted `/dashboard/test` + `/api/test`) per user. It survives ONLY on the `dashboard-demo` branch (the public demo deploy).
+   - **DEPLOYS:** `main` → marketing project `mello-omega.vercel.app` (dashboard at `/dashboard`). Separate Vercel project **`mello-dashboard-demo`** tracks the **`dashboard-demo`** branch (env `NEXT_PUBLIC_DEMO_MODE=1`, scripted Test Mello, seed-only) — note it still has the OLD hybrid look until someone ports the dark theme onto that branch.
+   - STILL TODO: **10.3** Supabase magic-link auth + per-facility RLS (dashboard is currently OPEN). Order locked by user: pages → Supabase → auth. Once auth lands, make dashboard pages dynamic (currently static-prerendered). **See `TESTING_NOTES.md`** for the end-to-end test guide.
 11. ⏳ **Per-facility learning loop** (uses Step 7's captured transcripts/tool_calls/outcomes). NOT live model training — it's: (a) prompt/example refinement from real call patterns, (b) per-facility memory (common requests, demand times, dialect quirks) fed as context, (c) optional fine-tuning ONLY if Sarvam supports it. Privacy: this-facility scope, audited, 90-day transcript TTL. See decision #3 + #12.
 
 ### Tool functions (IMPLEMENTED — `src/brain/tools.ts`, run by `dispatchTool`)
@@ -292,27 +303,32 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Finish Step 10.2 (live data for Overview + Settings), then Step 10.3 (auth).**
-Order locked by user: pages → Supabase → auth. See the full state below.
+**Step 10.3 — dashboard auth (Supabase magic-link + per-facility RLS).**
+10.1 (pages) + 10.2 (live data) are DONE. The dashboard is currently OPEN — auth
+is the last piece before it can be public on real data. Order locked: pages →
+Supabase → auth. After auth: switch dashboard pages from static-prerender to
+dynamic, and flip `DASHBOARD_LIVE=1` so they read the signed-in facility's rows.
 
-### Step 10 — facility dashboard (IN PROGRESS) 🟡
-- **Visual direction = "Hybrid"** (dark live rail + light paper), chosen from 3
-  rendered mockups (`scripts/mockups/`). Lives in the Next app under `/dashboard`
-  (nested layout, brand tokens; custom-cursor + Lenis disabled there).
-- **All pages BUILT** (seed-backed, some live): Overview, Calls list, Call detail
-  (transcript bubbles + tool-call trace + booking card w/ court + privacy delete),
-  Bookings, Members, Settings, **Test Mello**.
-- **Live Supabase read-path (10.2) — PARTIAL:** `getCalls/getCall/getBookings/
-  getMembers` read real rows (`src/lib/dashboard/live.ts` + `db.ts`) with seed
-  fallback. **STILL SEED:** `getOverview` (stats + live rail) + `getSettings`.
-- **Test Mello** (`/dashboard/test`) — chat **or** mic (browser speech-to-text),
-  her voice played back. Proxies (`/api/test/[action]`) to the agent server's
-  real `/test/*` (CallAgent), so turns persist to Supabase + a booking fires the
-  WhatsApp confirmation. **Text-first**: shows her reply (~2s) then plays voice in
-  the background via a new `/test/speak` endpoint; has a 🔊/🔇 voice toggle.
-- **STILL TODO:** 10.2 leftover (Overview + Settings live), then **10.3 auth**
-  (Supabase magic-link + per-facility RLS — REQUIRED before the dashboard is
-  public; it's currently open).
+### Step 10 — facility dashboard (10.1 + 10.2 DONE) 🟢→🟡
+- **Visual direction = "Dark command-center" + light toggle** (PIVOTED 2026-06-11
+  from Hybrid). Default dark; sun/moon toggle (`ThemeToggle.tsx`, top-right,
+  no-flash via inline script in `dashboard/layout.tsx`, `localStorage` key
+  `mello-theme`). Theming = channel CSS vars (`--c-*`) → Tailwind tokens, scoped
+  to `#dash-root` via `[data-theme]` so marketing stays light. Green + **amber**
+  + white. Memory: `dashboard-direction.md` updated.
+- **All pages BUILT + live-wired** (seed fallback): Overview, Calls, Call detail,
+  Bookings, Members, **Reports**, Settings.
+- **Dashboard shows DEMO seed by default** (`USE_LIVE` flag OFF in `data.ts`) so
+  it looks alive pre-launch. Live rail animates (amber play button + waveform +
+  ticking timer). Set `DASHBOARD_LIVE=1` for live Supabase.
+- **Reports** = real analytics only (conversion, after-hours caught, demand-by-
+  hour, sports, member mix) — no gimmicks, no price refs. Before/after panel uses
+  `facilities.config.baseline.missed_per_month`.
+- **Test Mello DELETED from product** (`/dashboard/test` + `/api/test` gone);
+  lives only on the `dashboard-demo` branch.
+- **STILL TODO:** **10.3 auth** (Supabase magic-link + per-facility RLS —
+  REQUIRED before the dashboard is public; it's currently open) → then dynamic
+  rendering + `DASHBOARD_LIVE=1`.
 
 ### Latency — tuned this session
 - The bottleneck was **non-streaming TTS in the test console** (~2.3s), NOT the
