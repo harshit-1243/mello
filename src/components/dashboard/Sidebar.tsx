@@ -2,23 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/cn";
-import { DashMark } from "./DashMark";
+import { LogoOrb } from "@/components/ui/LogoOrb";
 import { LogoutButton } from "./LogoutButton";
+import {
+  LayoutDashboard,
+  PhoneCall,
+  CalendarDays,
+  Users,
+  BookOpen,
+  FlaskConical,
+  BarChart2,
+  Settings,
+} from "lucide-react";
 
 interface NavItem {
-  href: string;
+  icon: React.ElementType;
   label: string;
-  icon: React.ReactNode;
+  href: string;
+  exact?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: <IconGrid /> },
-  { href: "/dashboard/calls", label: "Calls", icon: <IconPhone /> },
-  { href: "/dashboard/bookings", label: "Bookings", icon: <IconList /> },
-  { href: "/dashboard/members", label: "Members", icon: <IconUsers /> },
-  { href: "/dashboard/reports", label: "Reports", icon: <IconChart /> },
-  { href: "/dashboard/settings", label: "Settings", icon: <IconGear /> },
+  { icon: LayoutDashboard, label: "Overview",   href: "/dashboard",          exact: true },
+  { icon: PhoneCall,       label: "Live Calls", href: "/dashboard/calls"                },
+  { icon: CalendarDays,    label: "Bookings",   href: "/dashboard/bookings"             },
+  { icon: Users,           label: "Members",    href: "/dashboard/members"              },
+  { icon: BookOpen,        label: "Playbook",   href: "/dashboard/playbook"             },
+  { icon: FlaskConical,    label: "Test Mello", href: "/dashboard/test"                 },
+  { icon: BarChart2,       label: "Reports",    href: "/dashboard/reports"              },
+  { icon: Settings,        label: "Settings",   href: "/dashboard/settings"             },
 ];
 
 export function Sidebar({
@@ -31,92 +43,135 @@ export function Sidebar({
   userEmail?: string | null;
 }) {
   const pathname = usePathname();
-  return (
-    <aside className="flex w-[248px] shrink-0 flex-col gap-8 border-r border-line px-4 py-6">
-      <Link href="/dashboard" className="flex items-center gap-2.5 px-2 text-[20px] font-semibold tracking-[-0.02em] text-ink">
-        <DashMark /> mello
-      </Link>
 
-      <nav className="flex flex-col gap-[3px]">
-        {NAV.map((item) => {
-          const active = item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href);
+  function isActive(item: NavItem) {
+    return item.exact ? pathname === item.href : pathname.startsWith(item.href);
+  }
+
+  const initials = facilityName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  return (
+    <aside
+      className="flex flex-col h-full w-[248px] shrink-0 sticky top-0 min-h-dvh"
+      style={{ background: "#0A120E", borderRight: "1px solid #16201B" }}
+    >
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-5 pt-7 pb-5">
+        <LogoOrb size={36} onStage className="shrink-0" />
+        <div>
+          <div
+            className="text-[15px] tracking-tight"
+            style={{ color: "#F4F8F6", fontFamily: "var(--font-geist-sans)", fontWeight: 600 }}
+          >
+            mello.ai
+          </div>
+          <div
+            className="text-[10px] tracking-[0.12em] uppercase"
+            style={{ color: "#7E908A" }}
+          >
+            AI Booking System
+          </div>
+        </div>
+      </div>
+
+      {/* Workspace card */}
+      <div className="px-4 pb-3">
+        <div
+          className="text-[10px] tracking-[0.12em] uppercase mb-2 px-1"
+          style={{ color: "#7E908A" }}
+        >
+          Workspace
+        </div>
+        <div
+          className="rounded-xl px-3 py-3 relative"
+          style={{ background: "#0E1714", border: "1px solid #1B2722" }}
+        >
+          <div
+            className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded"
+            style={{
+              background: "rgba(236,161,75,0.15)",
+              color: "#ECA14B",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+            }}
+          >
+            PRO
+          </div>
+          <div className="text-sm" style={{ color: "#F4F8F6", fontWeight: 600 }}>
+            {facilityName}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: "#7E908A" }}>
+            {facilityCity}
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5">
+        {NAV.map(({ icon: Icon, label, href, exact }) => {
+          const active = exact ? pathname === href : pathname.startsWith(href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[14.5px] font-medium transition-colors",
-                active ? "bg-green/10 text-green" : "text-ink-muted hover:bg-ink/[0.04] hover:text-ink",
-              )}
-            >
-              <span className="h-[17px] w-[17px] opacity-80">{item.icon}</span>
-              {item.label}
+            <Link key={href} href={href}>
+              <span
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer select-none"
+                style={{
+                  background: active ? "rgba(52,211,153,0.14)" : "transparent",
+                  color: active ? "#34D399" : "#7E908A",
+                  fontWeight: active ? 500 : 400,
+                  display: "flex",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    (e.currentTarget as HTMLSpanElement).style.background = "rgba(255,255,255,0.04)";
+                    (e.currentTarget as HTMLSpanElement).style.color = "#B0C4BB";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    (e.currentTarget as HTMLSpanElement).style.background = "transparent";
+                    (e.currentTarget as HTMLSpanElement).style.color = "#7E908A";
+                  }
+                }}
+              >
+                <Icon size={16} style={{ color: active ? "#34D399" : "inherit" }} />
+                {label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto">
-        <div className="flex items-center gap-2.5 border-t border-line pt-4">
-          <span className="grid h-[34px] w-[34px] place-items-center rounded-[9px] bg-gradient-to-br from-green to-green-press text-[14px] font-semibold text-on-green">
-            {facilityName.charAt(0)}
-          </span>
-          <span className="text-[13px] leading-tight">
-            <b className="block font-semibold text-ink">{facilityName}</b>
-            <span className="text-ink-muted">{facilityCity} · owner</span>
-          </span>
+      {/* Footer */}
+      <div
+        className="flex items-center gap-3 px-4 py-5"
+        style={{ borderTop: "1px solid #16201B" }}
+      >
+        <div
+          className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-semibold"
+          style={{
+            background: "linear-gradient(135deg, #5FF0B0 0%, #1E7A55 100%)",
+            color: "#07100C",
+          }}
+        >
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm truncate" style={{ color: "#F4F8F6", fontWeight: 500 }}>
+            {facilityName}
+          </div>
+          {userEmail && (
+            <div className="text-[11px] truncate" style={{ color: "#7E908A" }}>
+              {userEmail}
+            </div>
+          )}
         </div>
         {userEmail && <LogoutButton email={userEmail} />}
       </div>
     </aside>
-  );
-}
-
-/* --- inline icons (1.6px stroke, currentColor) --------------------------- */
-function IconGrid() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-}
-function IconPhone() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
-    </svg>
-  );
-}
-function IconList() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-}
-function IconUsers() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" />
-    </svg>
-  );
-}
-function IconChart() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="21" x2="21" y2="21" /><rect x="6" y="11" width="3.2" height="7" rx="0.8" />
-      <rect x="13" y="6" width="3.2" height="12" rx="0.8" />
-    </svg>
-  );
-}
-function IconGear() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-    </svg>
   );
 }
