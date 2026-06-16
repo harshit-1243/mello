@@ -7,6 +7,7 @@ import { env, twilioConfigured, sarvamConfigured, dbConfigured } from "./env.js"
 import { handleTwilioStream } from "./voice/twilioStream.js";
 import { warmFillers } from "./voice/ttsBridge.js";
 import { purgeExpiredTranscripts } from "./db/persistence.js";
+import { startLearningScheduler } from "./learning/scheduler.js";
 import { CallAgent } from "./brain/agent.js";
 import { synthesizeWav } from "./tester/synth.js";
 import { TESTER_HTML } from "./tester/page.js";
@@ -188,6 +189,11 @@ try {
     // Privacy: purge transcripts past their 90-day TTL — now and daily.
     void purgeExpiredTranscripts(app.log);
     setInterval(() => void purgeExpiredTranscripts(app.log), 24 * 60 * 60 * 1000).unref();
+
+    // Step 11: per-facility learning loop — analyze call history and refresh
+    // the context injected into Mello's system prompt. Runs on boot + daily.
+    const facilityId = (await import("./facility/facility.js")).loadFacilityConfig().facility.id;
+    startLearningScheduler(app.log, facilityId);
   }
 } catch (err) {
   app.log.error(err);

@@ -7,6 +7,7 @@ import { loadFacilityConfig, renderSystemPrompt, type FacilityConfig } from "../
 import { nowInTz, type NowInTz } from "../util/datetime.js";
 import { TOOLS, dispatchTool } from "./tools.js";
 import { startCall, endCall, logTranscript, logToolCall, logAudit } from "../db/persistence.js";
+import { loadMemory } from "../learning/memory.js";
 
 const MAX_TOOL_HOPS = 6; // safety cap on tool-call loops per user turn
 
@@ -87,6 +88,14 @@ export class CallAgent {
     });
 
     this.messages.push({ role: "system", content: systemPrompt });
+
+    // Inject per-facility learned context (demand patterns, hot misses, language mix).
+    // Generated daily by the learning loop; empty string when no data yet.
+    const facilityMemory = await loadMemory(this.log, this.facilityId);
+    if (facilityMemory) {
+      this.messages.push({ role: "system", content: facilityMemory });
+    }
+
     this.messages.push({
       role: "system",
       content: `Call connected. Caller phone: ${this.callerPhone}. Member: ${member.is_member ? `yes (${member.name})` : "no"}. You have already greeted with: "${this.greetingLine}"`,

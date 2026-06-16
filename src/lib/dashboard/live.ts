@@ -1,5 +1,5 @@
 import "server-only";
-import { db, FACILITY_ID } from "./db";
+import { db } from "./db";
 import type {
   CallRow,
   CallDetail,
@@ -78,30 +78,30 @@ function statusFromOutcome(outcome: string | null, hasTranscript: boolean): Call
 }
 
 /** Map facility members once → phone→name lookup. */
-async function memberNameMap(): Promise<Map<string, string>> {
+async function memberNameMap(facilityId: string): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (!db) return map;
-  const { data } = await db.from("members").select("name, phone").eq("facility_id", FACILITY_ID);
+  const { data } = await db.from("members").select("name, phone").eq("facility_id", facilityId);
   for (const m of data ?? []) map.set(m.phone as string, m.name as string);
   return map;
 }
 
 // --- loaders ---------------------------------------------------------------
 
-export async function loadCalls(): Promise<CallRow[] | null> {
+export async function loadCalls(facilityId: string): Promise<CallRow[] | null> {
   if (!db) return null;
   try {
     const start = `${todayIST()}T00:00:00`;
     const { data, error } = await db
       .from("call_logs")
       .select("id, caller_phone, is_member, started_at, ended_at, outcome")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .gte("started_at", start)
       .order("started_at", { ascending: false });
     if (error) throw error;
     if (!data || data.length === 0) return null;
 
-    const names = await memberNameMap();
+    const names = await memberNameMap(facilityId);
     return data.map((c): CallRow => {
       const dur = c.ended_at ? Math.max(0, Math.round((Date.parse(c.ended_at) - Date.parse(c.started_at)) / 1000)) : 0;
       return {
@@ -121,13 +121,13 @@ export async function loadCalls(): Promise<CallRow[] | null> {
   }
 }
 
-export async function loadCall(id: string): Promise<CallDetail | null> {
+export async function loadCall(id: string, facilityId: string): Promise<CallDetail | null> {
   if (!db) return null;
   try {
     const { data: call, error } = await db
       .from("call_logs")
       .select("id, caller_phone, is_member, started_at, ended_at, outcome")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .eq("id", id)
       .maybeSingle();
     if (error || !call) return null;
@@ -135,7 +135,7 @@ export async function loadCall(id: string): Promise<CallDetail | null> {
     const [{ data: tx }, { data: tools }, names] = await Promise.all([
       db.from("transcripts").select("role, content, created_at").eq("call_id", id).order("created_at"),
       db.from("tool_calls").select("tool, args, result, created_at").eq("call_id", id).order("created_at"),
-      memberNameMap(),
+      memberNameMap(facilityId),
     ]);
 
     const dur = call.ended_at
@@ -152,7 +152,7 @@ export async function loadCall(id: string): Promise<CallDetail | null> {
     const { data: bk } = await db
       .from("bookings")
       .select("sport, court_id, booking_date, start_time, end_time, source, basketball_mode")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .eq("booked_by_phone", call.caller_phone ?? "")
       .order("created_at", { ascending: false })
       .limit(1);
@@ -185,19 +185,19 @@ export async function loadCall(id: string): Promise<CallDetail | null> {
   }
 }
 
-export async function loadBookings(): Promise<{ upcoming: BookingRow[]; past: BookingRow[] } | null> {
+export async function loadBookings(facilityId: string): Promise<{ upcoming: BookingRow[]; past: BookingRow[] } | null> {
   if (!db) return null;
   try {
     const { data, error } = await db
       .from("bookings")
       .select("id, sport, court_id, booking_date, start_time, end_time, source, booked_by_phone, booked_by_name, basketball_mode")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .order("booking_date")
       .order("start_time");
     if (error) throw error;
     if (!data || data.length === 0) return null;
 
-    const names = await memberNameMap();
+    const names = await memberNameMap(facilityId);
     const today = todayIST();
     const upcoming: BookingRow[] = [];
     const past: BookingRow[] = [];
@@ -224,13 +224,13 @@ export async function loadBookings(): Promise<{ upcoming: BookingRow[]; past: Bo
   }
 }
 
-export async function loadMembers(): Promise<{ members: MemberRow[]; groups: GroupRow[] } | null> {
+export async function loadMembers(facilityId: string): Promise<{ members: MemberRow[]; groups: GroupRow[] } | null> {
   if (!db) return null;
   try {
     const [{ data: members, error: me }, { data: groups }, { data: gm }] = await Promise.all([
-      db.from("members").select("name, phone, tier, joined_at, active").eq("facility_id", FACILITY_ID).order("joined_at"),
-      db.from("groups").select("id, label").eq("facility_id", FACILITY_ID),
-      db.from("group_members").select("group_id, member_phone").eq("facility_id", FACILITY_ID),
+      db.from("members").select("name, phone, tier, joined_at, active").eq("facility_id", facilityId).order("joined_at"),
+      db.from("groups").select("id, label").eq("facility_id", facilityId),
+      db.from("group_members").select("group_id, member_phone").eq("facility_id", facilityId),
     ]);
     if (me) throw me;
     if (!members || members.length === 0) return null;
@@ -275,31 +275,31 @@ interface FacilityRow {
   config: Record<string, unknown> | null;
 }
 
-async function loadFacility(): Promise<FacilityRow | null> {
+async function loadFacility(facilityId: string): Promise<FacilityRow | null> {
   if (!db) return null;
   const { data } = await db
     .from("facilities")
     .select("name, city, open_time, close_time, config")
-    .eq("id", FACILITY_ID)
+    .eq("id", facilityId)
     .maybeSingle();
   return (data as FacilityRow) ?? null;
 }
 
-export async function loadOverview(): Promise<Overview | null> {
+export async function loadOverview(facilityId: string): Promise<Overview | null> {
   if (!db) return null;
   try {
-    const facility = await loadFacility();
+    const facility = await loadFacility(facilityId);
     if (!facility) return null;
 
     const today = todayIST();
     const dayStart = `${today}T00:00:00`;
-    const names = await memberNameMap();
+    const names = await memberNameMap(facilityId);
 
     // Today's calls.
     const { data: calls } = await db
       .from("call_logs")
       .select("id, caller_phone, is_member, started_at, ended_at, outcome")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .gte("started_at", dayStart)
       .order("started_at", { ascending: false });
     const callRows = calls ?? [];
@@ -327,7 +327,7 @@ export async function loadOverview(): Promise<Overview | null> {
     const { data: madeToday } = await db
       .from("bookings")
       .select("sport, start_time, end_time, booked_by_phone, basketball_mode, source")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .eq("source", "mello")
       .gte("created_at", dayStart);
     const made = madeToday ?? [];
@@ -358,7 +358,7 @@ export async function loadOverview(): Promise<Overview | null> {
     const { data: up } = await db
       .from("bookings")
       .select("id, sport, court_id, booking_date, start_time, booked_by_name, source")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .gte("booking_date", today)
       .order("booking_date")
       .order("start_time")
@@ -380,7 +380,7 @@ export async function loadOverview(): Promise<Overview | null> {
     const { data: liveRows } = await db
       .from("call_logs")
       .select("id, caller_phone, is_member, started_at, outcome")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .is("ended_at", null)
       .gte("started_at", dayStart)
       .order("started_at", { ascending: false })
@@ -422,10 +422,10 @@ function inr(n: number): string {
   return `₹${n.toLocaleString("en-IN")}`;
 }
 
-export async function loadSettings(): Promise<SettingsView | null> {
+export async function loadSettings(facilityId: string): Promise<SettingsView | null> {
   if (!db) return null;
   try {
-    const facility = await loadFacility();
+    const facility = await loadFacility(facilityId);
     if (!facility) return null;
     const cfg = (facility.config ?? {}) as Record<string, unknown>;
 
@@ -490,23 +490,23 @@ function istHour(iso: string): number {
   return parseInt(h, 10) % 24;
 }
 
-export async function loadReports(): Promise<ReportData | null> {
+export async function loadReports(facilityId: string): Promise<ReportData | null> {
   if (!db) return null;
   try {
-    const facility = await loadFacility();
+    const facility = await loadFacility(facilityId);
     if (!facility) return null;
 
     const periodDays = 30;
     const since = new Date(Date.now() - periodDays * 86_400_000).toISOString();
     const openHour = parseInt((facility.open_time || "08:00").split(":")[0], 10);
     const closeHour = parseInt((facility.close_time || "24:00").split(":")[0], 10);
-    const names = await memberNameMap();
+    const names = await memberNameMap(facilityId);
 
     // Calls in the period.
     const { data: calls } = await db
       .from("call_logs")
       .select("started_at, ended_at, outcome")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .gte("started_at", since);
     const callRows = calls ?? [];
     let answered = 0;
@@ -522,7 +522,7 @@ export async function loadReports(): Promise<ReportData | null> {
     const { data: bookings } = await db
       .from("bookings")
       .select("sport, start_time, end_time, booked_by_phone, basketball_mode, created_at")
-      .eq("facility_id", FACILITY_ID)
+      .eq("facility_id", facilityId)
       .eq("source", "mello")
       .gte("created_at", since);
     const bk = bookings ?? [];

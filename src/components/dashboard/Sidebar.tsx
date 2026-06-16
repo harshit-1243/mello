@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { DashMark } from "./DashMark";
+import { LogoutButton } from "./LogoutButton";
 
 interface NavItem {
   href: string;
@@ -20,7 +21,15 @@ const NAV: NavItem[] = [
   { href: "/dashboard/settings", label: "Settings", icon: <IconGear /> },
 ];
 
-export function Sidebar({ facilityName, facilityCity }: { facilityName: string; facilityCity: string }) {
+export function Sidebar({
+  facilityName,
+  facilityCity,
+  userEmail,
+}: {
+  facilityName: string;
+  facilityCity: string;
+  userEmail?: string | null;
+}) {
   const pathname = usePathname();
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-8 border-r border-line px-4 py-6">
@@ -47,14 +56,17 @@ export function Sidebar({ facilityName, facilityCity }: { facilityName: string; 
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2.5 border-t border-line pt-4">
-        <span className="grid h-[34px] w-[34px] place-items-center rounded-[9px] bg-gradient-to-br from-green to-green-press text-[14px] font-semibold text-on-green">
-          {facilityName.charAt(0)}
-        </span>
-        <span className="text-[13px] leading-tight">
-          <b className="block font-semibold text-ink">{facilityName}</b>
-          <span className="text-ink-muted">{facilityCity} · owner</span>
-        </span>
+      <div className="mt-auto">
+        <div className="flex items-center gap-2.5 border-t border-line pt-4">
+          <span className="grid h-[34px] w-[34px] place-items-center rounded-[9px] bg-gradient-to-br from-green to-green-press text-[14px] font-semibold text-on-green">
+            {facilityName.charAt(0)}
+          </span>
+          <span className="text-[13px] leading-tight">
+            <b className="block font-semibold text-ink">{facilityName}</b>
+            <span className="text-ink-muted">{facilityCity} · owner</span>
+          </span>
+        </div>
+        {userEmail && <LogoutButton email={userEmail} />}
       </div>
     </aside>
   );

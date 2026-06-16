@@ -11,6 +11,7 @@
  */
 
 import { loadCalls, loadCall, loadBookings, loadMembers, loadOverview, loadSettings, loadReports } from "./live";
+import { currentFacilityId } from "./session";
 
 /**
  * Pre-launch the dashboard shows the rich DEMO seed below so it always looks
@@ -66,7 +67,7 @@ export interface Overview {
 
 /** Overview — live Supabase when configured, else the demo seed below. */
 export async function getOverview(): Promise<Overview> {
-  return USE_LIVE ? (await loadOverview()) ?? seedOverview() : seedOverview();
+  return USE_LIVE ? (await loadOverview(await currentFacilityId())) ?? seedOverview() : seedOverview();
 }
 
 /** Seeded overview — mirrors the demo facility (Raheja Ileseum). */
@@ -275,12 +276,12 @@ const CALLS: CallDetail[] = [
 
 export async function getCalls(): Promise<CallRow[]> {
   const seed = () => CALLS.map(({ transcript, toolCalls, booking, ...row }) => row);
-  return USE_LIVE ? (await loadCalls()) ?? seed() : seed();
+  return USE_LIVE ? (await loadCalls(await currentFacilityId())) ?? seed() : seed();
 }
 
 export async function getCall(id: string): Promise<CallDetail | null> {
   const seed = () => CALLS.find((c) => c.id === id) ?? null;
-  return USE_LIVE ? (await loadCall(id)) ?? seed() : seed();
+  return USE_LIVE ? (await loadCall(id, await currentFacilityId())) ?? seed() : seed();
 }
 
 // ===========================================================================
@@ -314,7 +315,7 @@ const BOOKINGS_PAST: BookingRow[] = [
 
 export async function getBookings(): Promise<{ upcoming: BookingRow[]; past: BookingRow[] }> {
   const seed = { upcoming: BOOKINGS_UPCOMING, past: BOOKINGS_PAST };
-  return USE_LIVE ? (await loadBookings()) ?? seed : seed;
+  return USE_LIVE ? (await loadBookings(await currentFacilityId())) ?? seed : seed;
 }
 
 // ===========================================================================
@@ -335,7 +336,7 @@ export interface GroupRow {
 }
 
 export async function getMembers(): Promise<{ members: MemberRow[]; groups: GroupRow[] }> {
-  return USE_LIVE ? (await loadMembers()) ?? SEED_MEMBERS : SEED_MEMBERS;
+  return USE_LIVE ? (await loadMembers(await currentFacilityId())) ?? SEED_MEMBERS : SEED_MEMBERS;
 }
 
 const SEED_MEMBERS: { members: MemberRow[]; groups: GroupRow[] } = {
@@ -367,7 +368,7 @@ export interface SettingsView {
 }
 
 export async function getSettings(): Promise<SettingsView> {
-  return USE_LIVE ? (await loadSettings()) ?? seedSettings() : seedSettings();
+  return USE_LIVE ? (await loadSettings(await currentFacilityId())) ?? seedSettings() : seedSettings();
 }
 
 function seedSettings(): SettingsView {
@@ -414,7 +415,7 @@ export interface ReportData {
 }
 
 export async function getReports(): Promise<ReportData> {
-  return USE_LIVE ? (await loadReports()) ?? seedReports() : seedReports();
+  return USE_LIVE ? (await loadReports(await currentFacilityId())) ?? seedReports() : seedReports();
 }
 
 function seedReports(): ReportData {

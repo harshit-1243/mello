@@ -50,11 +50,15 @@ models from **Sarvam** (STT `saaras` streaming, LLM `sarvam-105b`, TTS `bulbul:v
 - See `agent/server/README.md` for full details.
 
 ### Pending
-- **Step 10.3 (NEXT):** dashboard auth — Supabase magic-link + per-facility RLS (dashboard is currently OPEN). 10.1 (pages) + 10.2 (live data) ✅ DONE. **Step 11:** learning loop.
-- Step 9 ✅ done (WhatsApp confirmation + Razorpay link, graceful stubs). Needs WhatsApp + Razorpay creds in `.env.local` to actually send/charge.
+- **SEC-CRIT-01:** REST API zero auth — world-readable. Must add Bearer API-key middleware to `agent/server` before ANY client demo.
+- **SEC-CRIT-02:** Phone normalisation broken — E.164 never matches 10-digit member records. Fix `normalize_phone()` in `agent/server/src/booking/engine.ts`.
+- **Dashboard dynamic + DASHBOARD_LIVE=1** — auth is done but pages still static-prerendered; flip after security fixes.
+- **`escalate_to_human` tool** — still a stub returning `{scheduled:true}`. Wire to real notifications when dashboard notification layer exists.
+- Step 9 ✅ done (WhatsApp confirmation + Razorpay link, graceful stubs). Needs WhatsApp + Razorpay creds in `.env.local` to actually send/charge. Meta sandbox token expires ~24h.
 - **Twilio number** — KYC pending; blocks the live PHONE demo (test console works now).
 - Logo (user prefers streetwear / Jordan Jumpman energy, NOT abstract painting NOT M-monogram)
 - `/privacy` and `/security` pages on the marketing site (discussed, not built)
+- **Legal documents** (`Desktop\Mello_Legal\`, 9 .md files) — Draft 1.0, aligned to SRS v1.0. User said SRS has issues and will provide corrected version; docs need re-review after that + qualified Indian lawyer review before use.
 
 ---
 
@@ -211,14 +215,23 @@ If any group member books sport X at time T, no other group member can book spor
 7. 🟡 **Supabase DB — capture layer DONE, read-path pending.** Schema `agent/server/db/schema.sql` (facilities, members, groups, group_members, bookings, call_logs, transcripts, tool_calls, audit_log; RLS enabled). DB client `src/db/client.ts`, persistence `src/db/persistence.ts` (call logs + transcripts + tool calls + audit — the LEARNING-LOOP capture layer), seed `src/db/seed.ts` (`npm run db:seed`). Wired into the agent (startSession/endSession, per-turn transcript + tool-call logging). **Graceful: no creds → in-memory seed, demo still works.** STILL TODO: swap the BookingEngine READ path (members/availability) from config.json to Supabase so bookings persist across calls; per-facility RLS policies (with Step 10 dashboard auth). Needs user's SUPABASE_URL + SERVICE_KEY.
 8. ✅ **5 privacy rules** — audio never persisted (stream-through only); transcripts 90-day TTL + `purgeExpiredTranscripts` (boot + daily, `src/db/persistence.ts`); audit_log wired (call_started, deletes, purges); per-facility isolation (facility_id + RLS); right-to-delete via `delete_my_data` tool (`deleteCallerData`) + `deleteFacilityData()` ready for the dashboard. Verified delete flow + audit entries live.
 9. ✅ **WhatsApp confirmation + Razorpay link** — `src/notify/` (whatsapp.ts, razorpay.ts, confirmation.ts). After a confirmed `create_booking`, the server fires a fire-and-forget WhatsApp confirmation (THE only place the court number appears — never spoken). `send_payment_link` now creates a real Razorpay Payment Link and delivers it over WhatsApp. Graceful: no `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` → message is LOGGED not sent; no Razorpay keys → placeholder link. `engine.createBooking` now returns `amount` (members ₹0; non-members rate×hours, basketball full/half). Smoke-verified (₹600 badminton, ₹0 member tennis, ₹800 basketball half). Needs from user (NOT blocking): Meta WhatsApp token + phone-number-id (sandbox OK) and Razorpay test keys → paste into `.env.local`.
-10. 🟡 **10.1 + 10.2 DONE, 10.3 (auth) NEXT** — Facility owner dashboard. Lives in the Next app under `/dashboard` (nested layout; custom-cursor + Lenis disabled there). **Pages:** Overview, Calls list, Call detail (transcript bubbles + tool-call trace + booking card w/ court + privacy delete), Bookings, Members, **Reports** (NEW), Settings. Data layer = `src/lib/dashboard/{data,format,live,db}.ts`.
+10. ✅ **Steps 10.1 + 10.2 + 10.3 ALL DONE** — Facility owner dashboard + auth. Lives in the Next app under `/dashboard` (nested layout; custom-cursor + Lenis disabled there). **Pages:** Overview, Calls list, Call detail (transcript bubbles + tool-call trace + booking card w/ court + privacy delete), Bookings, Members, **Reports** (NEW), Settings. Data layer = `src/lib/dashboard/{data,format,live,db}.ts`.
    - **VISUAL DIRECTION PIVOTED (2026-06-11): now "Dark command-center" with a light toggle** (was Hybrid). Default **dark**, sun/moon toggle top-right (no-flash, `localStorage` key `mello-theme`). Theme works via **channel CSS vars** (`--c-*` R G B) in `globals.css` → Tailwind tokens (`ink/paper/line/green/signal/amber/...`); `[data-theme="dark"|"light"]` set on **`#dash-root` only** (marketing site untouched). Palette: green primary + **amber** secondary (resolved/play/money) + white numbers. `stage`/`on-stage` stay hardcoded-dark (live rail). See memory `dashboard-direction.md`.
    - **10.2 live data DONE:** `getOverview/getSettings/getReports/getCalls/getCall/getBookings/getMembers` all read live Supabase (`live.ts`) with seed fallback. BUT the dashboard **defaults to rich DEMO seed** (`USE_LIVE = process.env.DASHBOARD_LIVE === "1"` in `data.ts`, default OFF) because there's no real facility yet — set `DASHBOARD_LIVE=1` to read live. (The "paid vs pay-at-venue" stat was dropped — no backing column; replaced with member/non-member split.)
    - **Reports page** (`/dashboard/reports`): real analytics only — call→booking conversion, after-hours calls caught, demand-by-hour, bookings-by-sport, member mix. **No gimmicks** (no sentiment/Hindi-accuracy/uptime) and **no price references** (pricing per-facility + changes). "Before vs after Mello" panel reads a baseline from `facilities.config.baseline.missed_per_month` (collected post-deal); demo seed sets it so the panel shows.
    - **Test Mello REMOVED from the product** (deleted `/dashboard/test` + `/api/test`) per user. It survives ONLY on the `dashboard-demo` branch (the public demo deploy).
    - **DEPLOYS:** `main` → marketing project `mello-omega.vercel.app` (dashboard at `/dashboard`). Separate Vercel project **`mello-dashboard-demo`** tracks the **`dashboard-demo`** branch (env `NEXT_PUBLIC_DEMO_MODE=1`, scripted Test Mello, seed-only) — note it still has the OLD hybrid look until someone ports the dark theme onto that branch.
-   - STILL TODO: **10.3** Supabase magic-link auth + per-facility RLS (dashboard is currently OPEN). Order locked by user: pages → Supabase → auth. Once auth lands, make dashboard pages dynamic (currently static-prerendered). **See `TESTING_NOTES.md`** for the end-to-end test guide.
-11. ⏳ **Per-facility learning loop** (uses Step 7's captured transcripts/tool_calls/outcomes). NOT live model training — it's: (a) prompt/example refinement from real call patterns, (b) per-facility memory (common requests, demand times, dialect quirks) fed as context, (c) optional fine-tuning ONLY if Sarvam supports it. Privacy: this-facility scope, audited, 90-day transcript TTL. See decision #3 + #12.
+   - **10.3 auth DONE (2026-06-16):** Supabase magic-link auth — `/login` page, Server Action `sendMagicLink()`, PKCE callback at `/auth/callback/route.ts`, session via `@supabase/ssr` cookie client, `src/proxy.ts` (Next.js 16 proxy — NOT middleware.ts) guards `/dashboard` → redirects to `/login` when unauthenticated. Per-facility: `facility_users` table with RLS (migration `002_dashboard_auth.sql`). `connect2harshit123@gmail.com` seeded as admin. Logout via `LogoutButton.tsx` Server Action. `authConfigured` flag = graceful off without `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Verified: `GET /dashboard` → 307 → `/login`. STILL TODO after security fixes: make dashboard pages dynamic + flip `DASHBOARD_LIVE=1`.
+   - **New files (Step 10.3):** `src/lib/supabase/{config,server,proxy}.ts`, `src/lib/dashboard/session.ts`, `src/app/login/page.tsx`, `src/app/login/actions.ts`, `src/app/auth/callback/route.ts`, `src/app/dashboard/actions.ts`, `src/components/dashboard/LogoutButton.tsx`, `src/proxy.ts`, `agent/server/db/migrations/002_dashboard_auth.sql`.
+11. ✅ **Per-facility learning loop CODED (Step 11, 2026-06-16)** — reads real call transcripts/outcomes, generates per-facility context, injects into Mello's system prompt daily. NOT live model training.
+   - **How it works:** boot → run analyzer → save context to `facility_memory` table → inject as extra system message at call start. Repeats every 24h via `setInterval(...).unref()`.
+   - **`agent/server/src/learning/analyzer.ts`** — 4 queries (30/90-day windows): `getCallStats()` (calls, bookings, conversion%), `getPeakDemand()` (top sport+hour combos), `getHotMisses()` (slots asked for but unavailable, min 2 misses), `getLanguageMix()` (% Devanagari in transcripts).
+   - **`agent/server/src/learning/memory.ts`** — `generateAndSaveMemory()` builds a context string + upserts to `facility_memory`. `loadMemory()` reads it at call start.
+   - **`agent/server/src/learning/scheduler.ts`** — `startLearningScheduler()` runs immediately on boot then every 24h.
+   - **`agent/server/src/brain/agent.ts`** — `startSession()` now calls `loadMemory()` and pushes it as a second system message.
+   - **`agent/server/src/index.ts`** — boot block calls `startLearningScheduler()` when DB is configured.
+   - **`agent/server/db/migrations/003_facility_memory.sql`** — `facility_memory` table with RLS (`service_all` + `owner_read` policies).
+   - Graceful: if DB not configured, memory load returns null → skipped silently.
 
 ### Tool functions (IMPLEMENTED — `src/brain/tools.ts`, run by `dispatchTool`)
 - `verify_member(phone)` → `{ is_member, name?, tier? }`
@@ -303,13 +316,22 @@ Vercel deploys in ~1-2 min. Hard refresh (`Ctrl+Shift+R`) to bypass browser cach
 
 ## Immediate next step (when user resumes)
 
-**Step 10.3 — dashboard auth (Supabase magic-link + per-facility RLS).**
-10.1 (pages) + 10.2 (live data) are DONE. The dashboard is currently OPEN — auth
-is the last piece before it can be public on real data. Order locked: pages →
-Supabase → auth. After auth: switch dashboard pages from static-prerender to
-dynamic, and flip `DASHBOARD_LIVE=1` so they read the signed-in facility's rows.
+**Fix the two CRITICAL security bugs before any client demo:**
 
-### Step 10 — facility dashboard (10.1 + 10.2 DONE) 🟢→🟡
+| # | Bug | File/area | Risk |
+|---|---|---|---|
+| SEC-CRIT-01 | REST API has ZERO auth — world-readable | `agent/server/src/index.ts` (add Bearer API-key middleware) | Anyone on internet can read your DB |
+| SEC-CRIT-02 | Phone normalisation broken — E.164 never matches 10-digit member records | `agent/server/src/booking/engine.ts` → `normalize_phone()` | Bookings silently fail for all non-E.164 callers |
+
+Also HIGH (fix before production, fine for internal demo):
+- CORS hardcoded to `localhost:3000` — breaks Vercel
+- `check_availability` returns ~3,300 tokens — approaching Cerebras 8K context
+- LLM 55s tail latency — no timeout in Pipecat
+- Facility info hallucination when system prompt has no facility_info
+
+After security bugs are fixed, make dashboard pages dynamic and flip `DASHBOARD_LIVE=1`.
+
+### Step 10 — facility dashboard ✅ ALL DONE (10.1 + 10.2 + 10.3)
 - **Visual direction = "Dark command-center" + light toggle** (PIVOTED 2026-06-11
   from Hybrid). Default dark; sun/moon toggle (`ThemeToggle.tsx`, top-right,
   no-flash via inline script in `dashboard/layout.tsx`, `localStorage` key
@@ -326,9 +348,11 @@ dynamic, and flip `DASHBOARD_LIVE=1` so they read the signed-in facility's rows.
   `facilities.config.baseline.missed_per_month`.
 - **Test Mello DELETED from product** (`/dashboard/test` + `/api/test` gone);
   lives only on the `dashboard-demo` branch.
-- **STILL TODO:** **10.3 auth** (Supabase magic-link + per-facility RLS —
-  REQUIRED before the dashboard is public; it's currently open) → then dynamic
-  rendering + `DASHBOARD_LIVE=1`.
+- **10.3 auth DONE (2026-06-16):** Supabase magic-link, `src/proxy.ts` guards
+  `/dashboard` → `/login`. `facility_users` table + RLS in migration `002`.
+  `connect2harshit123@gmail.com` seeded. Verified: `/dashboard` → 307 → `/login`.
+- **STILL TODO:** make dashboard pages dynamic + flip `DASHBOARD_LIVE=1` (after
+  the two CRITICAL security bugs are fixed in the agent server).
 
 ### Latency — tuned this session
 - The bottleneck was **non-streaming TTS in the test console** (~2.3s), NOT the
@@ -455,4 +479,4 @@ That should give you full context in <5 minutes. Now ask the user what they want
 
 ---
 
-*Last updated: end of session that built the marketing site, deployed to Vercel, and created the agent config + system prompt v2.*
+*Last updated: 2026-06-16 — Steps 10.3 (dashboard auth) + 11 (learning loop) coded and activated. Two CRITICAL security bugs flagged (SEC-CRIT-01 API zero-auth, SEC-CRIT-02 phone normalisation broken) — fix before any client demo.*
