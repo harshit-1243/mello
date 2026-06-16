@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wordmark } from "@/components/ui/Wordmark";
+import { LogoOrb } from "@/components/ui/LogoOrb";
 import { Button } from "@/components/ui/Button";
 import { Menu, X, ArrowUpRight } from "@/components/ui/icons";
 import { NAV_LINKS, SITE } from "@/lib/site";
@@ -72,7 +72,7 @@ export function Nav() {
       )}
     >
       <nav className="mx-auto flex h-16 max-w-content items-center justify-between gap-4 px-5 sm:h-[68px] sm:px-8">
-        <Wordmark onStage={light} />
+        <LogoOrb size={40} onStage={light} />
 
         <div className="hidden items-center gap-0.5 md:flex">
           {NAV_LINKS.map((l) => (

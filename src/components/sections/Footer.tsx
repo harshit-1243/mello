@@ -1,5 +1,5 @@
 import { Container } from "@/components/ui/Container";
-import { Wordmark } from "@/components/ui/Wordmark";
+import { LogoOrb } from "@/components/ui/LogoOrb";
 import { SmoothLink } from "@/components/ui/SmoothLink";
 import { SITE } from "@/lib/site";
 
@@ -38,7 +38,7 @@ export function Footer() {
       <Container className="py-16 sm:py-20">
         <div className="grid gap-12 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
-            <Wordmark onStage />
+            <LogoOrb size={44} onStage />
             <p className="mt-5 text-[0.97rem] leading-relaxed text-on-stage/65">
               {SITE.tagline}
             </p>
