@@ -323,6 +323,39 @@
 }
 
 /* ------------------------------------------------------------------ *
+ * Legal pages — prose body text inside .prose-legal sections.
+ * ------------------------------------------------------------------ */
+.prose-legal p,
+.prose-legal li {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: rgb(var(--c-ink) / 0.8);
+}
+.prose-legal p + p {
+  margin-top: 0.85em;
+}
+.prose-legal ul {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  padding-left: 1.25em;
+  list-style: disc;
+}
+.prose-legal li + li {
+  margin-top: 0.5em;
+}
+.prose-legal strong {
+  color: rgb(var(--c-ink));
+  font-weight: 600;
+}
+.prose-legal code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+  background: rgb(var(--c-ink) / 0.06);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+/* ------------------------------------------------------------------ *
  * Marquee — kinetic key-phrase ticker.
  * ------------------------------------------------------------------ */
 .marquee-mask {
