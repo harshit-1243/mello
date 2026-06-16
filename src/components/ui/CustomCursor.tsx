@@ -49,7 +49,10 @@ export function CustomCursor() {
       if ((e.target as HTMLElement).closest(interactive))
         ring.classList.remove("is-hover");
     };
-    const onLeave = () => gsap.to([dot, ring], { opacity: 0, duration: 0.2 });
+    const onLeave = () => {
+      shown = false;
+      gsap.to([dot, ring], { opacity: 0, duration: 0.2 });
+    };
 
     window.addEventListener("mousemove", onMove);
     document.addEventListener("mouseover", onOver);
