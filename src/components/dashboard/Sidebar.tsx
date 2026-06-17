@@ -24,7 +24,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { icon: LayoutDashboard, label: "Overview",   href: "/dashboard",          exact: true },
-  { icon: PhoneCall,       label: "Live Calls", href: "/dashboard/calls"                },
+  { icon: PhoneCall,       label: "Calls",      href: "/dashboard/calls"                },
   { icon: CalendarDays,    label: "Bookings",   href: "/dashboard/bookings"             },
   { icon: Users,           label: "Members",    href: "/dashboard/members"              },
   { icon: BookOpen,        label: "Playbook",   href: "/dashboard/playbook"             },

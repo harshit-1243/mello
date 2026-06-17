@@ -192,17 +192,9 @@ export default function SettingsPage() {
           <h1 style={{ fontFamily: GS, fontSize: 56, fontWeight: 400, color: "#F4F8F6", lineHeight: 1.05, letterSpacing: "-0.025em", margin: 0 }}>Settings</h1>
           <p className="mt-2 text-sm" style={{ color: "#7E908A" }}>Configure how mello behaves for your facility.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-full font-medium"
-            style={{ background: "rgba(52,211,153,0.14)", color: "#34D399", border: "1px solid rgba(52,211,153,0.2)" }}>
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#34D399" }} />
-            1 Call Live Now
-          </div>
-          <button className="relative w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#0E1714", border: "1px solid #1B2722" }}>
-            <Bell size={16} style={{ color: "#7E908A" }} />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: "#34D399" }} />
-          </button>
-        </div>
+        <button className="relative w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#0E1714", border: "1px solid #1B2722" }}>
+          <Bell size={16} style={{ color: "#7E908A" }} />
+        </button>
       </div>
 
       <div className="flex flex-1 min-h-0">
