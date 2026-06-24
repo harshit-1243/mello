@@ -89,7 +89,6 @@ const FACILITY_DIR =
   env.FACILITY_DIR ?? path.resolve(here, "../../../facilities/raheja-ileseum");
 
 let configCache: FacilityConfig | null = null;
-let promptCache: string | null = null;
 
 export function loadFacilityConfig(): FacilityConfig {
   if (!configCache) {
@@ -100,10 +99,8 @@ export function loadFacilityConfig(): FacilityConfig {
 }
 
 function loadSystemPromptTemplate(): string {
-  if (!promptCache) {
-    promptCache = readFileSync(path.join(FACILITY_DIR, "system-prompt.md"), "utf8");
-  }
-  return promptCache;
+  // Read fresh every call so edits to system-prompt.md take effect without restart.
+  return readFileSync(path.join(FACILITY_DIR, "system-prompt.md"), "utf8");
 }
 
 /** Render the system prompt, substituting {{handlebars}} runtime variables. */

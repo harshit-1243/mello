@@ -61,6 +61,12 @@ export const TESTER_HTML = /* html */ `<!doctype html>
         </optgroup>
       </select>
     </label>
+    <label>Mic language
+      <select id="reclang">
+        <option value="en-IN" selected>English (India)</option>
+        <option value="hi-IN">Hindi / Hinglish</option>
+      </select>
+    </label>
     <button id="start" class="btn-green">Start call</button>
     <button id="reset" class="btn-ghost">Reset</button>
     <label style="flex-direction:row;align-items:center;gap:6px;color:var(--text);font-size:13px;">
@@ -72,7 +78,8 @@ export const TESTER_HTML = /* html */ `<!doctype html>
 </div>
 <div class="composer">
   <div class="inner">
-    <input id="text" type="text" placeholder="Start the call first, then type what the caller says…" disabled autocomplete="off" />
+    <button id="mic" class="btn-ghost" disabled title="Hold-free: click to talk, click again to stop">🎤 Speak</button>
+    <input id="text" type="text" placeholder="Start the call first, then type or click 🎤 to talk…" disabled autocomplete="off" />
     <button id="send" class="btn-green" disabled>Send</button>
   </div>
 </div>
@@ -114,10 +121,10 @@ export const TESTER_HTML = /* html */ `<!doctype html>
     removeBubble(thinking);
     bubble(res.reply || '(no greeting)', 'mello');
     play(res.audio);
-    $('text').disabled = false; $('send').disabled = false; $('text').focus();
+    $('text').disabled = false; $('send').disabled = false; $('mic').disabled = false; $('text').focus();
   };
 
-  $('reset').onclick = () => { sessionId = null; $('log').innerHTML=''; $('text').disabled=true; $('send').disabled=true; };
+  $('reset').onclick = () => { sessionId = null; $('log').innerHTML=''; $('text').disabled=true; $('send').disabled=true; $('mic').disabled=true; stopMic(); };
 
   async function send() {
     const text = $('text').value.trim();
@@ -132,6 +139,48 @@ export const TESTER_HTML = /* html */ `<!doctype html>
   }
   $('send').onclick = send;
   $('text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+
+  // --- Microphone (browser speech-to-text → existing brain) ---------------
+  // Uses the browser's built-in speech recognition (Chrome/Edge). Your spoken
+  // words are transcribed here and sent to the same /test/message route, so
+  // Mello replies in her real Sarvam voice. (Production phone calls use Sarvam
+  // STT; this is the no-phone way to talk to her with your mic.)
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+
+  function stopMic() {
+    listening = false;
+    $('mic').textContent = '🎤 Speak';
+    $('mic').classList.remove('btn-green'); $('mic').classList.add('btn-ghost');
+    try { rec && rec.stop(); } catch {}
+  }
+
+  $('mic').onclick = () => {
+    if (!SR) { alert('Your browser has no built-in speech recognition. Use Chrome or Edge, or type instead.'); return; }
+    if (listening) { stopMic(); return; }
+    rec = new SR();
+    rec.lang = $('reclang').value;
+    rec.interimResults = true;
+    rec.continuous = false;
+    listening = true;
+    $('mic').textContent = '⏺ Listening… (click to stop)';
+    $('mic').classList.remove('btn-ghost'); $('mic').classList.add('btn-green');
+    let finalText = '';
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t; else interim += t;
+      }
+      $('text').value = (finalText + ' ' + interim).trim();
+    };
+    rec.onerror = (e) => { stopMic(); if (e.error !== 'no-speech' && e.error !== 'aborted') alert('Mic error: ' + e.error); };
+    rec.onend = () => {
+      stopMic();
+      if ($('text').value.trim()) send();   // auto-send what you said
+    };
+    try { rec.start(); } catch { stopMic(); }
+  };
 </script>
 </body>
 </html>`;

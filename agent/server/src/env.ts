@@ -89,6 +89,12 @@ export const env = {
   RAZORPAY_KEY_SECRET: optional("RAZORPAY_KEY_SECRET"),
   // Payment links expire after this many minutes (mirrors config.payment).
   RAZORPAY_LINK_VALIDITY_MINUTES: Number(optional("RAZORPAY_LINK_VALIDITY_MINUTES") ?? 60),
+
+  // --- API auth (SEC-CRIT-01) -----------------------------------------------
+  // Bearer token required on all /test/* routes when set. Generate any long
+  // random string (e.g. `openssl rand -hex 32`) and paste here + ngrok header.
+  // If unset, test routes are open — fine on localhost, DO NOT expose via ngrok.
+  MELLO_API_KEY: optional("MELLO_API_KEY"),
 } as const;
 
 /** True once we have enough Twilio config to actually handle live calls. */
@@ -106,3 +112,6 @@ export const whatsappConfigured = Boolean(env.WHATSAPP_TOKEN) && Boolean(env.WHA
 
 /** True once real Razorpay links can be created (else a placeholder is used). */
 export const razorpayConfigured = Boolean(env.RAZORPAY_KEY_ID) && Boolean(env.RAZORPAY_KEY_SECRET);
+
+/** True once the API key is set — /test/* routes will require Bearer auth. */
+export const apiKeyConfigured = Boolean(env.MELLO_API_KEY);

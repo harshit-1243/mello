@@ -13,7 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { facilityName, facilityCity } = await getOverview();
 
   return (
-    <div className="flex min-h-dvh" style={{ background: "#0A120E", color: "#F4F8F6" }}>
+    <div className="flex min-h-dvh" style={{ background: "#0E0A1E", color: "#F3F1FB" }}>
       <Sidebar facilityName={facilityName} facilityCity={facilityCity} userEmail={email} />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex-1">{children}</main>

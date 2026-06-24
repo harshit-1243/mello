@@ -8,36 +8,39 @@
  * ------------------------------------------------------------------ */
 :root {
   /* Full-colour tokens — consumed by hand-written CSS (glows, waveform, grain). */
-  --ink: #181a15;
-  --ink-muted: #5c5f54;
-  --paper: #f5f3ee;
-  --paper-raised: #fbfaf7;
-  --paper-hover: #f0eee7;
-  --line: #e5e2d9;
-  --stage: #0d100c;
-  --stage-raised: #161a14;
-  --on-stage: #ecefe8;
-  --green: #0e7c45;
-  --green-press: #0b6238;
-  --signal: #36dd83;
-  --on-green: #f4fff8;
-  --danger: #c5462f;
+  --ink: #1d1726;
+  --ink-muted: #6a6080;
+  --paper: #f5f1fa;
+  --paper-raised: #fcfafe;
+  --paper-hover: #efe8f7;
+  --line: #e4dcef;
+  --stage: #160f1e;
+  --stage-raised: #211733;
+  --on-stage: #ede6f5;
+  --green: #8b3db8;
+  --green-press: #762fa0;
+  --signal: #c95ccb;
+  --on-green: #fbf5ff;
+  --danger: #d14b63;
 
   /* Channel tokens (R G B) — consumed by Tailwind colour utilities so opacity
-     modifiers work and [data-theme] can re-theme the dashboard. Light values. */
-  --c-ink: 24 26 21;
-  --c-ink-muted: 92 95 84;
-  --c-paper: 245 243 238;
-  --c-paper-raised: 251 250 247;
-  --c-paper-hover: 240 238 231;
-  --c-line: 229 226 217;
-  --c-green: 14 124 69;
-  --c-green-press: 11 98 56;
-  --c-signal: 54 221 131;
-  --c-amber: 196 125 42;
-  --c-on-green: 244 255 248;
-  --c-danger: 197 70 47;
-  --amber: #c47d2a;
+     modifiers work and [data-theme] can re-theme the dashboard. Light values.
+     Brand palette: lavender/orchid (deep orchid CTA, vibrant orchid accent,
+     periwinkle secondary). The token names stay (green/signal/amber) so no
+     component churn — only their values changed. */
+  --c-ink: 29 23 38;
+  --c-ink-muted: 106 96 128;
+  --c-paper: 245 241 250;
+  --c-paper-raised: 252 250 254;
+  --c-paper-hover: 239 232 247;
+  --c-line: 228 220 239;
+  --c-green: 139 61 184;
+  --c-green-press: 118 47 160;
+  --c-signal: 201 92 203;
+  --c-amber: 134 126 178;
+  --c-on-green: 251 245 255;
+  --c-danger: 209 75 99;
+  --amber: #867eb2;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --focus: var(--green);
@@ -397,4 +400,163 @@
   .wave-bar {
     transform: scaleY(0.7);
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * VoiceOrb — cursor-reactive AI orb. Motion handles the 3D tilt + the
+ * specular highlight position; CSS does the breathing core, the rotating
+ * conic ring, and the sonar ripples. Orchid/lavender palette.
+ * ------------------------------------------------------------------ */
+.orb-stage {
+  position: relative;
+  perspective: 900px;
+  display: grid;
+  place-items: center;
+}
+.orb-tilt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* premium 3D glass sphere: layered radial gradients for real shading +
+   inset shadows for volume + outer bloom */
+.orb-core {
+  position: absolute;
+  inset: 16%;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 30% 23%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 15%),
+    radial-gradient(circle at 36% 30%,
+      #f0d9f8 0%, #d089d8 18%, #a64fd0 40%, #7a37b2 62%, #4a2280 84%, #2a1450 100%);
+  box-shadow:
+    inset -22px -28px 64px rgba(14, 5, 32, 0.82),
+    inset 18px 20px 52px rgba(255, 255, 255, 0.22),
+    inset 0 -10px 30px rgba(149, 151, 224, 0.4),
+    0 30px 80px -18px rgba(139, 61, 184, 0.7),
+    0 0 120px 4px rgba(183, 92, 180, 0.42);
+  animation: orb-breathe 6s ease-in-out infinite;
+}
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+/* glossy top specular highlight */
+.orb-spec {
+  position: absolute;
+  width: 34%;
+  height: 24%;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%) rotate(-20deg);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 68%);
+  filter: blur(3px);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+/* tilted planetary orbit ring → 3D depth (needs perspective on .orb-stage) */
+.orb-ring {
+  position: absolute;
+  inset: -12%;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg,
+    rgba(214, 165, 233, 0) 0deg,
+    rgba(214, 165, 233, 0.85) 110deg,
+    rgba(167, 131, 194, 0.5) 200deg,
+    rgba(214, 165, 233, 0) 320deg);
+  -webkit-mask: radial-gradient(circle, transparent 67%, #000 69%, #000 72.5%, transparent 74.5%);
+  mask: radial-gradient(circle, transparent 67%, #000 69%, #000 72.5%, transparent 74.5%);
+  transform: rotateX(72deg) rotate(0deg);
+  animation: orb-spin 18s linear infinite;
+}
+@keyframes orb-spin { to { transform: rotateX(72deg) rotate(360deg); } }
+/* soft contact shadow grounds the sphere */
+.orb-contact {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  width: 56%;
+  height: 11%;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(58, 27, 92, 0.6) 0%, rgba(58, 27, 92, 0) 70%);
+  filter: blur(14px);
+  pointer-events: none;
+}
+.orb-ripple {
+  position: absolute;
+  inset: 12%;
+  border-radius: 9999px;
+  border: 1px solid rgba(201, 92, 203, 0.4);
+  animation: orb-ripple 3.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes orb-ripple {
+  0% { transform: scale(0.78); opacity: 0.5; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+/* Logo: the real glass-orb image (public/logo/orb.png), masked to a circle with
+   a soft violet glow that gently breathes — faster on hover. */
+.logo-orb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  object-fit: cover;
+  filter: drop-shadow(0 2px 8px rgba(150, 95, 225, 0.5));
+  animation: logo-orb-breathe 4.5s ease-in-out infinite;
+}
+@keyframes logo-orb-breathe {
+  0%, 100% { filter: drop-shadow(0 2px 7px rgba(150, 95, 225, 0.4)); }
+  50% { filter: drop-shadow(0 2px 13px rgba(182, 122, 246, 0.78)); }
+}
+.logo-orb-link:hover .logo-orb-img {
+  animation-duration: 1.2s; /* "speaks" faster on hover */
+}
+
+/* Fade the WebGL canvas edges so there's no visible square box around the orb. */
+.orb-stage--3d {
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 76%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 76%);
+}
+
+/* Placeholder while the WebGL orb chunk loads. */
+.orb-loading {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 38% 32%, rgba(183, 92, 180, 0.4), rgba(58, 27, 92, 0.12) 64%, transparent 76%);
+  filter: blur(10px);
+  animation: orb-breathe 4s ease-in-out infinite;
+}
+
+/* Play affordance shown in the orb centre when idle. */
+.orb-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  padding-left: 3px;
+  border-radius: 9999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+/* Audio-reactive scale: --amp (0..1) is written per-frame from the call audio. */
+.orb-amp {
+  position: absolute;
+  inset: 0;
+  transform: scale(calc(1 + var(--amp, 0) * 0.2));
+  filter: brightness(calc(1 + var(--amp, 0) * 0.55));
+  transition: transform 70ms linear, filter 70ms linear;
+  will-change: transform, filter;
 }

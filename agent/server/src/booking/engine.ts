@@ -439,8 +439,23 @@ export class BookingEngine {
   }
 }
 
-/** Normalize a phone to "+<digits>" so caller-ID and config compare cleanly. */
+/**
+ * Normalize a phone to E.164 (+<country><number>) so caller-ID, config, and
+ * DB records all compare on the same string.
+ *
+ * Handles the common Indian input formats:
+ *   "+91 83698 51507" → "+918369851507"   (Twilio E.164 with spaces)
+ *   "+918369851507"   → "+918369851507"   (Twilio E.164)
+ *   "8369851507"      → "+918369851507"   (10-digit, no country code)
+ *   "08369851507"     → "+918369851507"   (0-prefixed 10-digit)
+ *
+ * 10-digit numbers starting with 6–9 are treated as Indian mobile numbers.
+ * Numbers that already include the country code (12 digits) are kept as-is.
+ */
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/[^\d]/g, "");
+  // 10-digit Indian mobile (or 0-prefixed 11-digit → strip the leading 0)
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
   return `+${digits}`;
 }

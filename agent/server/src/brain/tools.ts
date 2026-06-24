@@ -17,7 +17,7 @@ export const TOOLS: SarvamAI.ChatCompletionTool[] = [
       description: "Look up whether a phone number belongs to a member. Call once when the call connects.",
       parameters: {
         type: "object",
-        properties: { phone: { type: "string", description: "Caller phone in E.164, e.g. +918369851507" } },
+        properties: { phone: { type: "string", description: "Caller phone with country code, e.g. +918369851507" } },
         required: ["phone"],
       },
     },

@@ -3,14 +3,9 @@
 import { cn } from "@/lib/cn";
 
 /**
- * Animated green orb logo mark — portrait MP4 (1080×1920), sphere at top,
- * "mello.ai" text at bottom.
- *
- * Technique:
- *  - object-fit:cover fills the container width; height overflows bottom
- *  - object-position centers on the sphere (upper portion of the portrait video)
- *  - radial-gradient mask fades the edges → white background disappears on
- *    any background colour (dark stage or light paper) without blend modes
+ * Mello logo mark — the real glass-orb image (public/logo/orb.png), circular-
+ * cropped with a transparent background and a soft violet glow that gently
+ * breathes (faster on hover). Works on dark or light backgrounds.
  */
 export function LogoOrb({
   size = 40,
@@ -21,50 +16,20 @@ export function LogoOrb({
   onStage?: boolean;
   className?: string;
 }) {
-  const radialMask =
-    "radial-gradient(circle, black 52%, transparent 74%)";
-
   return (
     <a
       href="/"
       aria-label="mello — home"
       className={cn(
-        "block shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green",
+        "logo-orb-link block shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2",
+        onStage ? "focus-visible:ring-offset-stage" : "focus-visible:ring-offset-paper",
         className,
       )}
       style={{ width: size, height: size }}
     >
       <span className="sr-only">mello</span>
-      <div
-        className="w-full h-full overflow-hidden rounded-full"
-        style={{
-          WebkitMaskImage: radialMask,
-          maskImage: radialMask,
-        }}
-      >
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          disablePictureInPicture
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            // Portrait video: sphere is in the upper ~40% of the frame.
-            // 20% from top keeps sphere centered in the container and
-            // pushes the text label below the visible area.
-            objectPosition: "center 45%",
-            transform: "scale(1.4)",
-            transformOrigin: "center 45%",
-          }}
-        >
-          <source src="/logo/orb.mp4" type="video/mp4" />
-        </video>
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo/orb.png" alt="" width={size} height={size} draggable={false} className="logo-orb-img" />
     </a>
   );
 }
-
-

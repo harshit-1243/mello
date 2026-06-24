@@ -2,6 +2,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Reveal } from "@/components/ui/Reveal";
 import { SplitReveal } from "@/components/ui/SplitReveal";
+import { TiltCard } from "@/components/ui/TiltCard";
 import { Pill } from "@/components/ui/Pill";
 import { WaveBars } from "@/components/ui/WaveBars";
 import { Check, MessageCheck } from "@/components/ui/icons";
@@ -77,7 +78,7 @@ function BookMock() {
 
 function ChatMock() {
   return (
-    <div className="flex h-44 flex-col justify-end gap-2 rounded-2xl bg-[#E7F1EA] p-4">
+    <div className="flex h-44 flex-col justify-end gap-2 rounded-2xl bg-[#EFE8F7] p-4">
       <div className="max-w-[88%] self-end rounded-2xl rounded-br-md bg-green px-3.5 py-2.5 text-on-green shadow-sm">
         <div className="flex items-center gap-1.5 text-[12px] font-semibold">
           <MessageCheck className="h-4 w-4" />
@@ -143,15 +144,12 @@ export function Pillars() {
           confirmation.
         </Reveal>
 
-        <Reveal
-          className="mt-14 grid gap-5 lg:grid-cols-3"
-          stagger={0.1}
-          y={30}
-        >
-          {pillars.map((p) => (
-            <article
+        <div className="mt-14 grid gap-5 [perspective:1200px] lg:grid-cols-3">
+          {pillars.map((p, i) => (
+            <TiltCard
               key={p.tag}
-              className="group flex flex-col rounded-4xl border border-line bg-paper-raised p-5 shadow-soft transition-[transform,box-shadow] duration-300 ease-out-expo hover:-translate-y-1.5 hover:shadow-lift"
+              index={i}
+              className="group flex flex-col rounded-4xl border border-line bg-paper-raised p-5 shadow-soft transition-[box-shadow] duration-300 ease-out-expo hover:shadow-lift"
             >
               {p.mock}
               <div className="flex flex-1 flex-col px-1.5 pt-6">
@@ -165,9 +163,9 @@ export function Pillars() {
                   {p.body}
                 </p>
               </div>
-            </article>
+            </TiltCard>
           ))}
-        </Reveal>
+        </div>
       </Container>
     </section>
   );

@@ -5,6 +5,7 @@ import { SplitReveal } from "@/components/ui/SplitReveal";
 import { Button } from "@/components/ui/Button";
 import { Magnetic } from "@/components/ui/Magnetic";
 import { WaveBars } from "@/components/ui/WaveBars";
+import { VoiceOrb } from "@/components/ui/VoiceOrb";
 import { SITE } from "@/lib/site";
 
 export function ClosingCTA() {
@@ -24,6 +25,9 @@ export function ClosingCTA() {
       />
 
       <Container className="relative text-center">
+        <Reveal className="mb-10 flex justify-center sm:mb-12">
+          <VoiceOrb size={260} />
+        </Reveal>
         <Reveal className="flex justify-center">
           <Eyebrow onStage>Ready when they call</Eyebrow>
         </Reveal>

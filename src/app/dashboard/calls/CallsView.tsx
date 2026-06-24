@@ -9,9 +9,9 @@ const GS = "var(--font-geist-sans)";
 type Filter = "All" | "Booked" | "Missed";
 
 const STATUS = {
-  booked:  { label: "Booked",  color: "#34D399", bg: "rgba(52,211,153,0.14)", border: "rgba(52,211,153,0.2)" },
-  handled: { label: "Handled", color: "#7E908A", bg: "rgba(126,144,138,0.12)", border: "#1B2722" },
-  missed:  { label: "Missed",  color: "#ECA14B", bg: "rgba(236,161,75,0.14)", border: "rgba(236,161,75,0.2)" },
+  booked:  { label: "Booked",  color: "#A78BFA", bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.2)" },
+  handled: { label: "Handled", color: "#8C86A8", bg: "rgba(126,144,138,0.12)", border: "#2A2348" },
+  missed:  { label: "Missed",  color: "#F87171", bg: "rgba(248,113,113,0.14)", border: "rgba(248,113,113,0.22)" },
 } as const;
 
 function initials(name: string | undefined, phone: string): string {
@@ -32,25 +32,25 @@ function StatusChip({ status }: { status: CallDetail["status"] }) {
 function CallRow({ call, selected, onClick }: { call: CallDetail; selected: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full text-left px-3 py-3 rounded-xl transition-all duration-150 flex items-center gap-3"
-      style={{ background: selected ? "rgba(52,211,153,0.08)" : "transparent", border: selected ? "1px solid rgba(52,211,153,0.2)" : "1px solid transparent" }}
+      style={{ background: selected ? "rgba(167,139,250,0.08)" : "transparent", border: selected ? "1px solid rgba(167,139,250,0.2)" : "1px solid transparent" }}
       onMouseEnter={(e) => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)"; }}
       onMouseLeave={(e) => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
       <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-        style={{ background: "#16201B", color: "#7E908A" }}>
+        style={{ background: "#20183C", color: "#8C86A8" }}>
         {initials(call.name, call.phone)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-medium truncate" style={{ color: "#F4F8F6" }}>{call.name || formatPhone(call.phone)}</span>
+          <span className="text-sm font-medium truncate" style={{ color: "#F3F1FB" }}>{call.name || formatPhone(call.phone)}</span>
           {call.isMember && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(52,211,153,0.1)", color: "#34D399", border: "1px solid rgba(52,211,153,0.18)" }}>member</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(167,139,250,0.1)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.18)" }}>member</span>
           )}
         </div>
-        <div className="text-xs truncate" style={{ color: "#7E908A" }}>{call.intent}</div>
+        <div className="text-xs truncate" style={{ color: "#8C86A8" }}>{call.intent}</div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <StatusChip status={call.status} />
-        <span className="text-[11px]" style={{ color: "#7E908A", fontVariantNumeric: "tabular-nums" }}>{timeAgo(call.at)}</span>
+        <span className="text-[11px]" style={{ color: "#8C86A8", fontVariantNumeric: "tabular-nums" }}>{timeAgo(call.at)}</span>
       </div>
     </button>
   );
@@ -60,22 +60,22 @@ function DetailPanel({ call }: { call: CallDetail }) {
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Caller card */}
-      <div className="rounded-2xl p-5 shrink-0" style={{ background: "#0E1714", border: "1px solid #1B2722", boxShadow: "0 1px 0 0 rgba(255,255,255,0.04) inset" }}>
+      <div className="rounded-2xl p-5 shrink-0" style={{ background: "#181030", border: "1px solid #2A2348", boxShadow: "0 1px 0 0 rgba(255,255,255,0.04) inset" }}>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full flex items-center justify-center text-base font-semibold shrink-0"
-              style={{ background: "#16201B", color: "#B0C4BB" }}>
+              style={{ background: "#20183C", color: "#C2BCE0" }}>
               {initials(call.name, call.phone)}
             </div>
             <div>
-              <div className="mb-0.5" style={{ fontFamily: GS, fontSize: 22, fontWeight: 400, color: "#F4F8F6" }}>
+              <div className="mb-0.5" style={{ fontFamily: GS, fontSize: 22, fontWeight: 400, color: "#F3F1FB" }}>
                 {call.name || formatPhone(call.phone)}
               </div>
-              <div className="text-sm mb-1" style={{ color: "#7E908A" }}>
+              <div className="text-sm mb-1" style={{ color: "#8C86A8" }}>
                 {formatPhone(call.phone)} · {call.isMember ? "Member" : "Non-member"}
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(126,144,138,0.15)", color: "#7E908A" }}>
+                <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(126,144,138,0.15)", color: "#8C86A8" }}>
                   {call.language} · {clockFromSeconds(call.durationSeconds)}
                 </span>
               </div>
@@ -88,11 +88,11 @@ function DetailPanel({ call }: { call: CallDetail }) {
       {/* Booking made (if any) */}
       {call.booking && (
         <div className="rounded-2xl px-5 py-4 shrink-0 flex items-center gap-4 flex-wrap"
-          style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.18)" }}>
-          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0" style={{ color: "#34D399" }}>Booking made</span>
-          <span className="text-sm" style={{ color: "#F4F8F6" }}>{call.booking.sport} · {call.booking.court}</span>
-          <span className="text-sm" style={{ color: "#B0C4BB" }}>{call.booking.when}</span>
-          <span className="text-sm font-medium ml-auto" style={{ color: "#ECA14B" }}>
+          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
+          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0" style={{ color: "#A78BFA" }}>Booking made</span>
+          <span className="text-sm" style={{ color: "#F3F1FB" }}>{call.booking.sport} · {call.booking.court}</span>
+          <span className="text-sm" style={{ color: "#C2BCE0" }}>{call.booking.when}</span>
+          <span className="text-sm font-medium ml-auto" style={{ color: "#34D6E0" }}>
             {call.booking.amountInr === 0 ? "Member · ₹0" : rupees(call.booking.amountInr)}
           </span>
         </div>
@@ -100,10 +100,10 @@ function DetailPanel({ call }: { call: CallDetail }) {
 
       {/* Transcript (text only — audio is never stored) */}
       <div className="flex-1 rounded-2xl p-5 overflow-y-auto"
-        style={{ background: "#0E1714", border: "1px solid #1B2722", boxShadow: "0 1px 0 0 rgba(255,255,255,0.04) inset", minHeight: 0 }}>
-        <div className="text-[10px] tracking-[0.12em] uppercase mb-4" style={{ color: "#7E908A" }}>Transcript</div>
+        style={{ background: "#181030", border: "1px solid #2A2348", boxShadow: "0 1px 0 0 rgba(255,255,255,0.04) inset", minHeight: 0 }}>
+        <div className="text-[10px] tracking-[0.12em] uppercase mb-4" style={{ color: "#8C86A8" }}>Transcript</div>
         {call.transcript.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-sm" style={{ color: "#7E908A" }}>No transcript — caller hung up.</div>
+          <div className="flex items-center justify-center h-24 text-sm" style={{ color: "#8C86A8" }}>No transcript — caller hung up.</div>
         ) : (
           <div className="space-y-3">
             {call.transcript.map((line, i) => {
@@ -112,13 +112,13 @@ function DetailPanel({ call }: { call: CallDetail }) {
                 <div key={i} className={`flex ${isMello ? "justify-start" : "justify-end"}`}>
                   <div className={`flex items-start gap-2 max-w-[82%] ${isMello ? "" : "flex-row-reverse"}`}>
                     <span className="text-[10px] px-1.5 py-0.5 rounded mt-1 shrink-0 tracking-wide uppercase"
-                      style={isMello ? { background: "rgba(52,211,153,0.15)", color: "#34D399", fontWeight: 600 } : { background: "rgba(126,144,138,0.15)", color: "#7E908A", fontWeight: 600 }}>
+                      style={isMello ? { background: "rgba(167,139,250,0.15)", color: "#A78BFA", fontWeight: 600 } : { background: "rgba(126,144,138,0.15)", color: "#8C86A8", fontWeight: 600 }}>
                       {isMello ? "mello" : "caller"}
                     </span>
                     <div className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
                       style={isMello
-                        ? { background: "rgba(52,211,153,0.08)", color: "#D4EDE6", border: "1px solid rgba(52,211,153,0.15)", borderTopLeftRadius: 4 }
-                        : { background: "rgba(126,144,138,0.1)", color: "#B0C4BB", border: "1px solid #1B2722", borderTopRightRadius: 4 }}>
+                        ? { background: "rgba(167,139,250,0.08)", color: "#E4DEF5", border: "1px solid rgba(167,139,250,0.15)", borderTopLeftRadius: 4 }
+                        : { background: "rgba(126,144,138,0.1)", color: "#C2BCE0", border: "1px solid #2A2348", borderTopRightRadius: 4 }}>
                       {line.text}
                     </div>
                   </div>
@@ -132,15 +132,15 @@ function DetailPanel({ call }: { call: CallDetail }) {
       {/* Tool trace */}
       {call.toolCalls.length > 0 && (
         <div className="rounded-2xl px-5 py-3.5 shrink-0 flex items-start gap-3 flex-wrap"
-          style={{ background: "#0E1714", border: "1px solid #1B2722" }}>
-          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0 mt-1" style={{ color: "#7E908A" }}>Tool Calls</span>
-          <div className="w-px self-stretch shrink-0" style={{ background: "#16201B" }} />
+          style={{ background: "#181030", border: "1px solid #2A2348" }}>
+          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0 mt-1" style={{ color: "#8C86A8" }}>Tool Calls</span>
+          <div className="w-px self-stretch shrink-0" style={{ background: "#20183C" }} />
           <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             {call.toolCalls.map((t, i) => (
               <div key={i} className="flex items-center gap-1.5 text-xs">
-                <CheckCircle2 size={11} style={{ color: t.ok ? "#34D399" : "#ECA14B", flexShrink: 0 }} />
-                <code className="font-semibold" style={{ fontFamily: "monospace", color: "#F4F8F6" }}>{t.tool}</code>
-                <span className="truncate" style={{ color: "#7E908A" }}>{t.summary}</span>
+                <CheckCircle2 size={11} style={{ color: t.ok ? "#A78BFA" : "#F87171", flexShrink: 0 }} />
+                <code className="font-semibold" style={{ fontFamily: "monospace", color: "#F3F1FB" }}>{t.tool}</code>
+                <span className="truncate" style={{ color: "#8C86A8" }}>{t.summary}</span>
               </div>
             ))}
           </div>
@@ -166,12 +166,12 @@ export function CallsView({ calls }: { calls: CallDetail[] }) {
   return (
     <div className="flex flex-1 min-h-0" style={{ height: "calc(100vh - 150px)" }}>
       {/* Left — call list */}
-      <div className="flex flex-col shrink-0 overflow-hidden" style={{ width: "38%", borderRight: "1px solid #16201B" }}>
-        <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid #16201B" }}>
-          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "#0E1714", border: "1px solid #1B2722" }}>
+      <div className="flex flex-col shrink-0 overflow-hidden" style={{ width: "38%", borderRight: "1px solid #20183C" }}>
+        <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid #20183C" }}>
+          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "#181030", border: "1px solid #2A2348" }}>
             {filters.map((f) => (
               <button key={f} onClick={() => setFilter(f)} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
-                style={{ background: filter === f ? "#16201B" : "transparent", color: filter === f ? "#F4F8F6" : "#7E908A", border: filter === f ? "1px solid #1B2722" : "1px solid transparent" }}>
+                style={{ background: filter === f ? "#20183C" : "transparent", color: filter === f ? "#F3F1FB" : "#8C86A8", border: filter === f ? "1px solid #2A2348" : "1px solid transparent" }}>
                 {f}
               </button>
             ))}
@@ -179,8 +179,8 @@ export function CallsView({ calls }: { calls: CallDetail[] }) {
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-sm gap-2" style={{ color: "#7E908A" }}>
-              <Phone size={24} style={{ color: "#1B2722" }} />
+            <div className="flex flex-col items-center justify-center h-32 text-sm gap-2" style={{ color: "#8C86A8" }}>
+              <Phone size={24} style={{ color: "#2A2348" }} />
               No calls match this filter.
             </div>
           ) : (
@@ -196,7 +196,7 @@ export function CallsView({ calls }: { calls: CallDetail[] }) {
         {selected ? (
           <DetailPanel call={selected} />
         ) : (
-          <div className="flex items-center justify-center h-full text-sm" style={{ color: "#7E908A" }}>Select a call to see its transcript.</div>
+          <div className="flex items-center justify-center h-full text-sm" style={{ color: "#8C86A8" }}>Select a call to see its transcript.</div>
         )}
       </div>
     </div>

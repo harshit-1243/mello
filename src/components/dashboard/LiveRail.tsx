@@ -20,7 +20,7 @@ export function LiveRail({ live }: { live: LiveCall | null }) {
   }, [live]);
 
   return (
-    <div className="is-stage relative overflow-hidden border-b border-[#262b22] bg-stage px-9 py-5 text-on-stage">
+    <div className="is-stage relative overflow-hidden border-b border-[#242040] bg-stage px-9 py-5 text-on-stage">
       {/* soft signal glow */}
       <div
         className="pointer-events-none absolute -left-[5%] -top-[60%] h-[320px] w-[55%]"
@@ -31,7 +31,7 @@ export function LiveRail({ live }: { live: LiveCall | null }) {
         aria-hidden
       />
       <div className="relative">
-        <div className="mb-3.5 flex items-center gap-2.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#9aa093]">
+        <div className="mb-3.5 flex items-center gap-2.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#8F8AA6]">
           <SignalDot /> Live now
         </div>
 
@@ -46,21 +46,21 @@ export function LiveRail({ live }: { live: LiveCall | null }) {
                 {formatPhone(live.phone)}
                 {live.name ? ` · ${live.name}` : ""}
               </b>
-              <div className="mt-0.5 truncate text-[13px] text-[#9aa093]">
+              <div className="mt-0.5 truncate text-[13px] text-[#8F8AA6]">
                 <span className="text-signal">{live.detail}</span>
-                <span className="mx-2 text-[#4a5044]">·</span>
+                <span className="mx-2 text-[#3A3458]">·</span>
                 <span className="font-mono">{live.lastLine}</span>
               </div>
             </div>
             <MiniWave />
             <div className="ml-auto text-right">
               <div className="tabular text-[22px] font-semibold text-signal">{clockFromSeconds(seconds)}</div>
-              <div className="text-[11.5px] text-[#9aa093]">in progress</div>
+              <div className="text-[11.5px] text-[#8F8AA6]">in progress</div>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 py-1 text-[14px] text-[#9aa093]">
-            <span className="h-[9px] w-[9px] rounded-full bg-[#3a4034]" />
+          <div className="flex items-center gap-3 py-1 text-[14px] text-[#8F8AA6]">
+            <span className="h-[9px] w-[9px] rounded-full bg-[#2E2A48]" />
             No calls in progress — Mello is standing by.
           </div>
         )}

@@ -5,7 +5,7 @@ type Tone = "default" | "green" | "signal" | "danger" | "stage";
 const tones: Record<Tone, string> = {
   default: "bg-paper-raised text-ink-muted border-line",
   green: "bg-green/[0.08] text-green border-green/20",
-  signal: "bg-signal/10 text-[#0B6238] border-signal/30",
+  signal: "bg-signal/10 text-[#762FA0] border-signal/30",
   danger: "bg-danger/[0.08] text-danger border-danger/25",
   stage: "bg-white/[0.05] text-on-stage/85 border-white/10",
 };

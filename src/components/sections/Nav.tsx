@@ -67,7 +67,7 @@ export function Nav() {
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,box-shadow] duration-300 ease-out-expo",
         solid
-          ? "border-b border-line/80 bg-paper/80 shadow-[0_1px_0_rgba(24,26,21,0.04)] backdrop-blur-xl"
+          ? "border-b border-line/80 bg-paper/80 shadow-[0_1px_0_rgba(29,23,38,0.04)] backdrop-blur-xl"
           : "border-b border-transparent bg-transparent",
       )}
     >

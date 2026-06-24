@@ -1,0 +1,35 @@
+{
+  "duration": 21.79,
+  "lines": [
+    {
+      "who": "Mello",
+      "text": "Hi, thanks for calling Baseline Turf! How can I help?",
+      "start": 0,
+      "end": 2.73
+    },
+    {
+      "who": "Caller",
+      "text": "I'd like to book a five-a-side turf for tomorrow at seven PM.",
+      "start": 3.18,
+      "end": 8.22
+    },
+    {
+      "who": "Mello",
+      "text": "Seven PM is taken, but eight PM is open. Does that work for you?",
+      "start": 8.67,
+      "end": 12.42
+    },
+    {
+      "who": "Caller",
+      "text": "Yeah, eight o'clock works perfectly.",
+      "start": 12.87,
+      "end": 15.6
+    },
+    {
+      "who": "Mello",
+      "text": "Done! You're booked for eight PM. I've sent the confirmation on WhatsApp. Thank you!",
+      "start": 16.05,
+      "end": 21.34
+    }
+  ]
+}

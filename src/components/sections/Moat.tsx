@@ -80,7 +80,7 @@ export function Moat() {
           <div
             className={cn(
               "relative overflow-hidden rounded-4xl border border-signal/25 bg-stage-raised p-7",
-              "shadow-[0_0_0_1px_rgba(54,221,131,0.06),0_30px_60px_-30px_rgba(0,0,0,0.8)]",
+              "shadow-[0_0_0_1px_rgba(201,92,203,0.06),0_30px_60px_-30px_rgba(0,0,0,0.8)]",
             )}
           >
             <div

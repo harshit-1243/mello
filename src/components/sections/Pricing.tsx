@@ -3,6 +3,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Reveal } from "@/components/ui/Reveal";
 import { SplitReveal } from "@/components/ui/SplitReveal";
 import { PricingCard, type Plan } from "@/components/ui/PricingCard";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 const plans: Plan[] = [
   {
@@ -70,15 +71,13 @@ export function Pricing() {
           just a front desk that never misses.
         </Reveal>
 
-        <Reveal
-          className="mt-16 grid items-stretch gap-5 lg:grid-cols-3 lg:gap-6"
-          stagger={0.1}
-          y={30}
-        >
-          {plans.map((p) => (
-            <PricingCard key={p.name} plan={p} />
+        <div className="mt-16 grid items-stretch gap-5 [perspective:1300px] lg:grid-cols-3 lg:gap-6">
+          {plans.map((p, i) => (
+            <TiltCard key={p.name} index={i} max={6} className="h-full">
+              <PricingCard plan={p} />
+            </TiltCard>
           ))}
-        </Reveal>
+        </div>
 
         <Reveal
           as="p"

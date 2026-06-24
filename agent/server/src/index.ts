@@ -3,7 +3,7 @@ import formbody from "@fastify/formbody";
 import websocket from "@fastify/websocket";
 import twilio from "twilio";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { env, twilioConfigured, sarvamConfigured, dbConfigured } from "./env.js";
+import { env, twilioConfigured, sarvamConfigured, dbConfigured, apiKeyConfigured } from "./env.js";
 import { handleTwilioStream } from "./voice/twilioStream.js";
 import { warmFillers } from "./voice/ttsBridge.js";
 import { purgeExpiredTranscripts } from "./db/persistence.js";
@@ -77,6 +77,32 @@ app.get("/health", async () => ({
 
 app.get("/", async () => ({ service: "mello-voice", status: "up" }));
 
+// --- Outbound call trigger -------------------------------------------------
+// POST /voice/call { "to": "+91XXXXXXXXXX" } — dials a number using the Twilio
+// REST API. Twilio calls back /voice/incoming once the callee picks up, which
+// opens the Media Stream and hands off to the brain exactly like an inbound call.
+app.post("/voice/call", { preHandler: requireApiKey }, async (request, reply) => {
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_PHONE_NUMBER) {
+    return reply.code(503).send({ error: "twilio_not_configured" });
+  }
+
+  const { to } = (request.body ?? {}) as { to?: string };
+  if (!to) return reply.code(400).send({ error: "missing_to" });
+
+  const baseUrl = env.PUBLIC_BASE_URL?.replace(/\/$/, "") ?? `http://localhost:${env.PORT}`;
+  const client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+
+  const call = await client.calls.create({
+    to,
+    from: env.TWILIO_PHONE_NUMBER,
+    url: `${baseUrl}/voice/incoming`,
+    method: "POST",
+  });
+
+  request.log.info({ callSid: call.sid, to }, "Outbound call initiated");
+  return { ok: true, callSid: call.sid, to };
+});
+
 // --- Twilio incoming-call webhook ------------------------------------------
 // Twilio hits this the moment the number rings. We greet the caller, then open
 // a Media Stream so their audio flows to us over a WebSocket for transcription.
@@ -123,9 +149,27 @@ app.get("/voice/stream", { websocket: true }, (socket, request) => {
 // GET /test serves a chat UI; the two POSTs run the real brain + return TTS WAV.
 const testSessions = new Map<string, CallAgent>();
 
-app.get("/test", async (_req, reply) => reply.header("Content-Type", "text/html").send(TESTER_HTML));
+/**
+ * Bearer API-key guard for /test/* routes (SEC-CRIT-01).
+ * If MELLO_API_KEY is set, the Authorization header must match exactly.
+ * If not set, the route is open but a boot warning is shown (dev only).
+ */
+function requireApiKey(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void,
+) {
+  if (!apiKeyConfigured) return done(); // dev without key — open (warn at boot)
+  const auth = (request.headers["authorization"] as string | undefined) ?? "";
+  if (auth === `Bearer ${env.MELLO_API_KEY}`) return done();
+  reply.code(401).send({ error: "unauthorized" });
+}
 
-app.post("/test/start", async (request) => {
+app.get("/test", { preHandler: requireApiKey }, async (_req, reply) =>
+  reply.header("Content-Type", "text/html").send(TESTER_HTML),
+);
+
+app.post("/test/start", { preHandler: requireApiKey }, async (request) => {
   const { sessionId, callerPhone, speaker, withAudio } = (request.body ?? {}) as {
     sessionId?: string;
     callerPhone?: string;
@@ -142,7 +186,7 @@ app.post("/test/start", async (request) => {
   return { reply, audio };
 });
 
-app.post("/test/message", async (request) => {
+app.post("/test/message", { preHandler: requireApiKey }, async (request) => {
   const { sessionId, text, speaker, withAudio } = (request.body ?? {}) as {
     sessionId?: string;
     text?: string;
@@ -158,7 +202,7 @@ app.post("/test/message", async (request) => {
 
 // Synthesize speech for already-returned text (lets the dashboard show the reply
 // instantly, then play her voice a beat later instead of blocking on TTS).
-app.post("/test/speak", async (request) => {
+app.post("/test/speak", { preHandler: requireApiKey }, async (request) => {
   const { text, speaker } = (request.body ?? {}) as { text?: string; speaker?: string };
   if (!text?.trim()) return { audio: null };
   const audio = await synthesizeWav(text, speaker);
@@ -168,6 +212,11 @@ app.post("/test/speak", async (request) => {
 // --- Boot ------------------------------------------------------------------
 try {
   await app.listen({ port: env.PORT, host: env.HOST });
+  if (!apiKeyConfigured) {
+    app.log.warn(
+      "MELLO_API_KEY not set — /test/* routes are OPEN. Set it before exposing the server over ngrok or any public URL.",
+    );
+  }
   if (!twilioConfigured) {
     app.log.warn(
       "Twilio not configured yet (no SID/auth token). Server is up; fill in .env.local when KYC + auth clear.",

@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "outbound-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\Users\\HARSHIT\\OneDrive\\Desktop\\mello-outbound\\frontend", "run", "dev"],
+      "port": 3000,
+      "autoPort": false
     }
   ]
 }
