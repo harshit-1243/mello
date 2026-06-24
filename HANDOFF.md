@@ -26,7 +26,9 @@
 | **mello.ai** (this repo) | `C:\Users\HARSHIT\OneDrive\Desktop\mello.ai` | Marketing site + **inbound** voice agent (`agent/server/`) + **the unified operator dashboard** (`src/app/dashboard/`) | Next.js 16, React 19, TS, Tailwind v3; agent = Fastify+TS; Sarvam models; Supabase |
 | **mello-outbound** | `C:\Users\HARSHIT\OneDrive\Desktop\mello-outbound` | **Outbound** calling agent + (its own older Next.js dashboard, now superseded) | FastAPI + SQLAlchemy + SQLite; Pipecat; **Cerebras** LLM; Sarvam STT/TTS; Twilio |
 
-GitHub for this repo: **https://github.com/harshit-1243/mello** (current working branch: **`figma-dashboard`**, not merged to `main`).
+GitHub repos (both owned by `harshit-1243`):
+- **mello.ai** → **https://github.com/harshit-1243/mello** (current working branch **`figma-dashboard`**, not merged to `main`; `main` auto-deploys the marketing site to Vercel)
+- **mello-outbound** → **https://github.com/harshit-1243/mello-outbound** (branch `main`)
 
 **The dashboard lives in mello.ai and shows BOTH agents.** The `mello-outbound/frontend` dashboard is the weaker, separate one we decided NOT to use — don't build there.
 
