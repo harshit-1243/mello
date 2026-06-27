@@ -14,10 +14,11 @@ import {
   FlaskConical,
   BarChart2,
   Settings,
+  type LucideIcon,
 } from "lucide-react";
 
 interface NavItem {
-  icon: React.ElementType;
+  icon: LucideIcon;
   label: string;
   href: string;
   exact?: boolean;

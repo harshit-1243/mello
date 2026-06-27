@@ -5,6 +5,7 @@ import { Problem } from "@/components/sections/Problem";
 import { Statement } from "@/components/sections/Statement";
 import { Pillars } from "@/components/sections/Pillars";
 import { HowItWorks } from "@/components/sections/HowItWorks";
+import { Outbound } from "@/components/sections/Outbound";
 import { Moat } from "@/components/sections/Moat";
 import { SocialProof } from "@/components/sections/SocialProof";
 import { Pricing } from "@/components/sections/Pricing";
@@ -22,6 +23,7 @@ export default function Home() {
         <Statement />
         <Pillars />
         <HowItWorks />
+        <Outbound />
         <Moat />
         <SocialProof />
         <Pricing />

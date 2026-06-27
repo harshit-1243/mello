@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Bricolage_Grotesque } from "next/font/google";
 import { LenisProvider } from "@/components/providers/LenisProvider";
 import { CustomCursor } from "@/components/ui/CustomCursor";
+import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -15,6 +16,13 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+// Characterful display face for big headlines (body stays Inter).
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -71,11 +79,12 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${GeistSans.variable} ${inter.variable} ${jetbrainsMono.variable} ${bricolage.variable}`}
     >
       <body className="relative min-h-dvh">
         <script dangerouslySetInnerHTML={{ __html: animFlag }} />
         <div className="grain-layer" aria-hidden="true" />
+        <ScrollProgress />
         <CustomCursor />
         <LenisProvider>{children}</LenisProvider>
       </body>

@@ -5,7 +5,6 @@ import { SplitReveal } from "@/components/ui/SplitReveal";
 import { Button } from "@/components/ui/Button";
 import { Magnetic } from "@/components/ui/Magnetic";
 import { WaveBars } from "@/components/ui/WaveBars";
-import { VoiceOrb } from "@/components/ui/VoiceOrb";
 import { SITE } from "@/lib/site";
 
 export function ClosingCTA() {
@@ -26,7 +25,18 @@ export function ClosingCTA() {
 
       <Container className="relative text-center">
         <Reveal className="mb-10 flex justify-center sm:mb-12">
-          <VoiceOrb size={260} />
+          {/* the real mello logo orb */}
+          <span className="block" style={{ width: 200, height: 200 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo/orb.png"
+              alt=""
+              width={200}
+              height={200}
+              draggable={false}
+              className="logo-orb-img"
+            />
+          </span>
         </Reveal>
         <Reveal className="flex justify-center">
           <Eyebrow onStage>Ready when they call</Eyebrow>

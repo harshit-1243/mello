@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef } from "react";
+import { createElement, Fragment, useRef } from "react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/lib/use-isomorphic-layout-effect";
 
@@ -67,21 +67,23 @@ export function SplitReveal({
 
   const words = text.split(" ");
 
-  return (
-    <Tag ref={ref as React.Ref<HTMLElement>} className={className} aria-label={text}>
-      {words.map((w, i) => (
-        <Fragment key={i}>
-          <span
-            aria-hidden="true"
-            className="inline-block overflow-hidden pb-[0.14em] align-bottom -mb-[0.14em]"
-          >
-            <span data-word-inner className="inline-block will-change-transform">
-              {w}
-            </span>
+  // createElement (not <Tag>) sidesteps React 19's strict polymorphic
+  // ElementType JSX typing, which resolves children to `never`.
+  return createElement(
+    Tag,
+    { ref: ref as React.Ref<HTMLElement>, className, "aria-label": text },
+    words.map((w, i) => (
+      <Fragment key={i}>
+        <span
+          aria-hidden="true"
+          className="inline-block overflow-hidden pb-[0.14em] align-bottom -mb-[0.14em]"
+        >
+          <span data-word-inner className="inline-block will-change-transform">
+            {w}
           </span>
-          {i < words.length - 1 ? " " : null}
-        </Fragment>
-      ))}
-    </Tag>
+        </span>
+        {i < words.length - 1 ? " " : null}
+      </Fragment>
+    )),
   );
 }

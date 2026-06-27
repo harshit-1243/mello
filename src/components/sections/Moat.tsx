@@ -5,10 +5,9 @@ import { SplitReveal } from "@/components/ui/SplitReveal";
 import { Check, X, Globe } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 
-const them = ["English-only", "USD pricing", "No Hindi · no code-switching"];
+const them = ["English-only", "No Hindi · no code-switching"];
 const mello = [
   "Bilingual — Hindi + English",
-  "₹ pricing, India-first",
   "Built for India, ready to scale",
 ];
 

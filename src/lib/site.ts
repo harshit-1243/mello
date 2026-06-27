@@ -4,7 +4,7 @@
  */
 export const SITE = {
   name: "mello",
-  domain: "mello.ai",
+  domain: "melloai.in",
   tagline: "The AI receptionist for sports facilities.",
 
   // TODO: replace with your real Calendly scheduling link.
@@ -28,5 +28,8 @@ export const SITE = {
 export const NAV_LINKS = [
   { label: "Product", href: "#product" },
   { label: "How it works", href: "#how" },
+  { label: "Outbound", href: "#outbound" },
   { label: "Pricing", href: "#pricing" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
 ] as const;

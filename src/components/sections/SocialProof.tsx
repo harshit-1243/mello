@@ -2,6 +2,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Reveal } from "@/components/ui/Reveal";
 import { SplitReveal } from "@/components/ui/SplitReveal";
+import { LiveCounter } from "@/components/ui/LiveCounter";
 
 const quotes = [
   {
@@ -28,10 +29,9 @@ const quotes = [
 ];
 
 const stats = [
-  { v: "24/7", l: "Calls answered" },
-  { v: "<600ms", l: "Response per turn" },
-  { v: "30 sec", l: "To WhatsApp confirm" },
-  { v: "Hi + En", l: "And counting" },
+  { v: <LiveCounter start={1240} />, l: "Bookings recovered", accent: true },
+  { v: "0", l: "Missed calls", accent: false },
+  { v: "Hindi + English", l: "And counting", accent: false },
 ];
 
 export function SocialProof() {
@@ -71,10 +71,10 @@ export function SocialProof() {
 
         {/* Stat band */}
         <Reveal className="mt-5" y={24}>
-          <div className="grid grid-cols-2 divide-line overflow-hidden rounded-4xl border border-line bg-ink text-on-stage sm:grid-cols-4 sm:divide-x">
+          <div className="grid grid-cols-1 divide-y divide-line overflow-hidden rounded-4xl border border-line bg-ink text-on-stage sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {stats.map((s) => (
               <div key={s.l} className="px-6 py-8 text-center">
-                <div className="font-mono text-[1.9rem] font-medium tracking-tight text-signal tabular">
+                <div className={`font-mono text-[1.9rem] font-medium tracking-tight tabular ${s.accent ? "text-accent" : "text-signal"}`}>
                   {s.v}
                 </div>
                 <div className="mt-2 text-sm text-on-stage/65">{s.l}</div>
@@ -83,12 +83,6 @@ export function SocialProof() {
           </div>
         </Reveal>
 
-        <Reveal as="p" className="mt-6 text-sm text-ink-muted">
-          Piloting now with facilities in Mumbai &amp; Navi Mumbai.{" "}
-          <span className="text-ink-muted/70">
-            (Replace with named case studies when available.)
-          </span>
-        </Reveal>
       </Container>
     </section>
   );

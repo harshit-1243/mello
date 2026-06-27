@@ -16,8 +16,8 @@ const columns = [
     title: "Company",
     links: [
       { label: "Pricing", href: "#pricing" },
-      { label: "About", href: "#" },
-      { label: "Contact", href: `mailto:${SITE.CONTACT_EMAIL}` },
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
@@ -84,7 +84,7 @@ export function Footer() {
               href={SITE.social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-signal"
+              className="underline decoration-on-stage/25 underline-offset-4 transition-colors hover:text-signal hover:decoration-signal"
             >
               LinkedIn
             </a>
@@ -92,7 +92,7 @@ export function Footer() {
               href={SITE.social.twitter}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-signal"
+              className="underline decoration-on-stage/25 underline-offset-4 transition-colors hover:text-signal hover:decoration-signal"
             >
               X
             </a>
@@ -100,7 +100,7 @@ export function Footer() {
               href={SITE.social.instagram}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-signal"
+              className="underline decoration-on-stage/25 underline-offset-4 transition-colors hover:text-signal hover:decoration-signal"
             >
               Instagram
             </a>

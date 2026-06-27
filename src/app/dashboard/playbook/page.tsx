@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Clock, Dumbbell, IndianRupee, Lock, Users, Shuffle, CreditCard, X, Check } from "lucide-react";
+import { Bell, Clock, Dumbbell, IndianRupee, Lock, Users, Shuffle, CreditCard, X, Check, type LucideIcon } from "lucide-react";
 
 const GS = "var(--font-geist-sans)";
 
 interface Rule {
   id: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   title: string;
   label: string;
   value: string;

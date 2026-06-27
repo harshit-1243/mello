@@ -56,6 +56,12 @@ export function Nav() {
 
   const go = (href: string) => {
     setOpen(false);
+    // In-page anchors only exist on the homepage; from another route, go home
+    // first (then the browser scrolls to the hash).
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.href = "/" + href;
+      return;
+    }
     scrollToId(href);
   };
 
@@ -80,8 +86,12 @@ export function Nav() {
               key={l.href}
               href={l.href}
               onClick={(e) => {
-                e.preventDefault();
-                go(l.href);
+                if (l.href.startsWith("#")) {
+                  e.preventDefault();
+                  go(l.href);
+                } else {
+                  setOpen(false); // real page route → let the browser navigate
+                }
               }}
               className={cn(
                 "rounded-full px-3.5 py-2 text-[0.95rem] transition-colors duration-200",
@@ -128,8 +138,12 @@ export function Nav() {
               key={l.href}
               href={l.href}
               onClick={(e) => {
-                e.preventDefault();
-                go(l.href);
+                if (l.href.startsWith("#")) {
+                  e.preventDefault();
+                  go(l.href);
+                } else {
+                  setOpen(false); // real page route → let the browser navigate
+                }
               }}
               className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-lg text-ink transition-colors hover:bg-ink/[0.04]"
             >

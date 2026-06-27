@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 
 /**
  * mello.ai design tokens.
- * Cool/warm neutrals + ONE green accent (never blue/purple).
+ * Lavender/violet brand on a violet-black "stage" + one warm gold pop accent.
  * Mirrored as CSS variables in globals.css for hand-written CSS (glows, gradients).
  */
 const config: Config = {
@@ -25,16 +25,18 @@ const config: Config = {
         },
         line: "rgb(var(--c-line) / <alpha-value>)", // borders / dividers
         // Stage stays always-dark (marketing dark sections + the live rail).
+        // Violet-black to match the lavender brand (was a stray green-black).
         stage: {
-          DEFAULT: "#0D100C",
-          raised: "#161A14",
+          DEFAULT: "#160f1e",
+          raised: "#211733",
         },
-        "on-stage": "#ECEFE8",
+        "on-stage": "#ede6f5",
         green: {
           DEFAULT: "rgb(var(--c-green) / <alpha-value>)", // brand / CTA / "available"
           press: "rgb(var(--c-green-press) / <alpha-value>)",
         },
         signal: "rgb(var(--c-signal) / <alpha-value>)", // live/answered pulses
+        accent: "rgb(var(--c-accent) / <alpha-value>)", // warm gold pop (use sparingly)
         amber: "rgb(var(--c-amber) / <alpha-value>)", // secondary accent (resolved / play / money)
         "on-green": "rgb(var(--c-on-green) / <alpha-value>)",
         danger: "rgb(var(--c-danger) / <alpha-value>)",
@@ -42,6 +44,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
         display: [
+          "var(--font-display)",
           "var(--font-geist-sans)",
           "var(--font-inter)",
           "ui-sans-serif",
