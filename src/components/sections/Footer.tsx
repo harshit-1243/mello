@@ -89,14 +89,6 @@ export function Footer() {
               LinkedIn
             </a>
             <a
-              href={SITE.social.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline decoration-on-stage/25 underline-offset-4 transition-colors hover:text-signal hover:decoration-signal"
-            >
-              X
-            </a>
-            <a
               href={SITE.social.instagram}
               target="_blank"
               rel="noopener noreferrer"

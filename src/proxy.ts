@@ -14,6 +14,19 @@ import { authConfigured } from "@/lib/supabase/config";
  * is the authoritative one, close to the data.
  */
 export async function proxy(request: NextRequest) {
+  // INTERIM: the demo dashboard isn't gated by login yet, so don't expose it on
+  // any public domain. Allow it only on localhost (the operator's own machine);
+  // redirect everywhere else (melloai.in, *.vercel.app) to home. Remove this
+  // block once proper per-client auth is set up.
+  const host = request.nextUrl.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  if (!isLocal && request.nextUrl.pathname.startsWith("/dashboard")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   if (!authConfigured) return NextResponse.next();
 
   const { response, user } = await updateSession(request);
@@ -37,5 +50,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard", "/dashboard/:path*", "/login"],
 };

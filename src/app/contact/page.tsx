@@ -110,15 +110,6 @@ export default function ContactPage() {
                   className="font-medium text-green underline decoration-green/30 underline-offset-4 hover:decoration-green"
                 >
                   LinkedIn
-                </a>
-                ,{" "}
-                <a
-                  href={SITE.social.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-green underline decoration-green/30 underline-offset-4 hover:decoration-green"
-                >
-                  X
                 </a>{" "}
                 and{" "}
                 <a

@@ -20,8 +20,7 @@ export const SITE = {
   // TODO: add real profiles (or remove).
   social: {
     linkedin: "https://www.linkedin.com/company/mello-ai",
-    twitter: "https://x.com/mello_ai",
-    instagram: "https://www.instagram.com/mello.ai",
+    instagram: "https://www.instagram.com/mellooo.ai/",
   },
 } as const;
 
