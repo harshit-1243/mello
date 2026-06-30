@@ -175,7 +175,7 @@ export function OutboundView() {
                 <Kpi label="Calls Made" value={String(metrics.calls_made)} subtext={`${metrics.contacts_total} in list`} />
                 <Kpi label="Answer Rate" value={`${metrics.answer_rate_pct}%`} subtext={`${metrics.answered} answered`} />
                 <Kpi label="Qualified" value={String(metrics.qualified)} subtext="reached a person" />
-                <Kpi label="Booked" value={String(metrics.booked)} subtext={`${metrics.goal_completion_rate_pct}% goal completion`} accent="#34D6E0" />
+                <Kpi label="Booked" value={String(metrics.booked)} subtext={`${metrics.goal_completion_rate_pct}% goal completion`} accent="#F5B544" />
               </div>
 
               <div className="rounded-2xl p-5 mb-4" style={CARD}>

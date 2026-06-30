@@ -9,9 +9,9 @@ const GS = "var(--font-geist-sans)";
 
 // On-brand avatar gradients: violet ↔ cyan family only (no rainbow).
 const GRADIENTS = [
-  ["#C4B3FF", "#6A4FD0"], ["#9BE9F0", "#1FA8C0"], ["#B79BFF", "#7C4DD0"],
-  ["#7FE0EA", "#2C8FB0"], ["#D6C2F5", "#8A5CD0"], ["#A5E8F5", "#3A9FCF"],
-  ["#CBB6FF", "#6F50C8"], ["#8FD8E8", "#2585A8"], ["#B9A0F0", "#5E3FB0"],
+  ["#C4B3FF", "#6A4FD0"], ["#FAD488", "#1FA8C0"], ["#B79BFF", "#7C4DD0"],
+  ["#F8CE7A", "#2C8FB0"], ["#D6C2F5", "#8A5CD0"], ["#FCDC97", "#C7902F"],
+  ["#CBB6FF", "#6F50C8"], ["#F4C56A", "#9A6B1A"], ["#B9A0F0", "#5E3FB0"],
 ];
 
 function initials(name: string): string {

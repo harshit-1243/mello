@@ -97,8 +97,8 @@ export function Sidebar({
           <div
             className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded"
             style={{
-              background: "rgba(52,214,224,0.16)",
-              color: "#34D6E0",
+              background: "rgba(245,181,68,0.16)",
+              color: "#F5B544",
               fontWeight: 600,
               letterSpacing: "0.06em",
             }}

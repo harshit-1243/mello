@@ -92,7 +92,7 @@ function DetailPanel({ call }: { call: CallDetail }) {
           <span className="text-[10px] tracking-[0.12em] uppercase shrink-0" style={{ color: "#A78BFA" }}>Booking made</span>
           <span className="text-sm" style={{ color: "#F3F1FB" }}>{call.booking.sport} · {call.booking.court}</span>
           <span className="text-sm" style={{ color: "#C2BCE0" }}>{call.booking.when}</span>
-          <span className="text-sm font-medium ml-auto" style={{ color: "#34D6E0" }}>
+          <span className="text-sm font-medium ml-auto" style={{ color: "#F5B544" }}>
             {call.booking.amountInr === 0 ? "Member · ₹0" : rupees(call.booking.amountInr)}
           </span>
         </div>

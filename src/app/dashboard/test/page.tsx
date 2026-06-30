@@ -40,7 +40,7 @@ export default function TestMelloPage() {
           <div className="flex flex-col gap-3 w-full">
             <a href={`${AGENT_URL}/test`} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-opacity"
-              style={{ background: "linear-gradient(135deg, #34D6E0 0%, #2585A8 100%)", color: "#04222A", boxShadow: "0 4px 16px rgba(52,214,224,0.28)", textDecoration: "none" }}
+              style={{ background: "linear-gradient(135deg, #F5B544 0%, #9A6B1A 100%)", color: "#2E2206", boxShadow: "0 4px 16px rgba(245,181,68,0.28)", textDecoration: "none" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.88")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}>
               <ExternalLink size={15} />

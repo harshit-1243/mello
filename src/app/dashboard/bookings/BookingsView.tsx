@@ -45,7 +45,7 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
       <div className="flex gap-4">
         <SummaryTile label="Upcoming" value={String(upcoming.length)} sub="bookings ahead" />
         <SummaryTile label="Total" value={String(all.length)} sub={`${melloCount} booked by Mello`} />
-        <SummaryTile label="Revenue booked" value={rupees(revenue)} sub="non-member · to collect at venue" accent="#34D6E0" />
+        <SummaryTile label="Revenue booked" value={rupees(revenue)} sub="non-member · to collect at venue" accent="#F5B544" />
       </div>
 
       {/* Table card */}

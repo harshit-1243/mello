@@ -10,8 +10,7 @@ export const SITE = {
   // TODO: replace with your real Calendly scheduling link.
   CALENDLY_URL: "https://calendly.com/connect2harshit123/30min",
 
-  // TODO: replace with your real inbox.
-  CONTACT_EMAIL: "hello@mello.ai",
+  CONTACT_EMAIL: "support@melloai.in",
 
   location: "Mumbai, India",
   builtIn: "Built in Mumbai.",

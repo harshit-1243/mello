@@ -7,7 +7,7 @@ import { rupees } from "@/lib/dashboard/format";
 const GS = "var(--font-geist-sans)";
 const GRID = "#20183C";
 const TICK = "#8C86A8";
-const CYAN = "#34D6E0";
+const CYAN = "#F5B544";
 const VIOLET = "#A78BFA";
 
 function hourLabel(h: number): string {
@@ -53,7 +53,7 @@ export function ReportsView({ data }: { data: ReportData }) {
         <KpiTile label="Call → Booking" value={`${data.conversionPct}%`} sub={`${data.bookings} of ${data.calls} calls`} />
         <KpiTile label="Answer Rate" value={`${data.answerRatePct}%`} sub={`${data.answered} of ${data.calls} answered`} />
         <KpiTile label="After-Hours Calls" value={String(data.afterHoursCalls)} sub="caught outside open hours" />
-        <KpiTile label="Revenue Booked" value={rupees(data.revenueInr)} sub={`non-member · last ${data.periodDays} days`} accent="#34D6E0" />
+        <KpiTile label="Revenue Booked" value={rupees(data.revenueInr)} sub={`non-member · last ${data.periodDays} days`} accent="#F5B544" />
       </div>
 
       {/* Row 1 */}

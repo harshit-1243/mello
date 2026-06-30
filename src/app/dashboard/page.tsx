@@ -58,7 +58,7 @@ export default async function OverviewPage() {
         <KpiCard label="Calls Today"    value={String(stats.callsToday)} subtext={`${stats.answered} answered`} />
         <KpiCard label="Answer Rate"    value={`${stats.answerRatePct}%`} subtext={`${stats.answered} of ${stats.callsToday} answered`} />
         <KpiCard label="Bookings Made"  value={String(stats.bookingsMade)} subtext={`${stats.bookingsMade - stats.bookingsMember} non-member · ${stats.bookingsMember} member`} />
-        <KpiCard label="Revenue Booked" value={rupees(stats.revenueBookedInr)} subtext={`${stats.bookingsMade - stats.bookingsMember} to collect at venue`} accent="#34D6E0" />
+        <KpiCard label="Revenue Booked" value={rupees(stats.revenueBookedInr)} subtext={`${stats.bookingsMade - stats.bookingsMember} to collect at venue`} accent="#F5B544" />
       </div>
 
       {/* Activity + Upcoming */}
