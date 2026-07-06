@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { OutboundCampaign, OutboundMetrics, OutboundContact } from "@/lib/dashboard/outbound";
+import type { OutboundCampaign, OutboundMetrics, OutboundContact, OutboundCall } from "@/lib/dashboard/outbound";
 
 const GS = "var(--font-geist-sans)";
 const POLL_MS = 4000;
@@ -50,6 +50,60 @@ function mmss(sec: number): string {
   const s = Math.max(0, Math.round(sec));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+function clockIST(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+}
+
+// One call in the feed — name · time · duration · outcome, expandable to the full transcript.
+function CallRow({ call, open, onToggle }: { call: OutboundCall; open: boolean; onToggle: () => void }) {
+  const p = dispoPill(call.disposition, call.answered ? "done" : "no_answer");
+  const hasTx = call.transcript.length > 0;
+  return (
+    <div style={{ borderBottom: "1px solid #20183C" }}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 py-3 text-left"
+        style={{ cursor: hasTx ? "pointer" : "default", background: "transparent" }}
+      >
+        <div className="min-w-0 flex items-center gap-3">
+          <span className="text-xs" style={{ color: GREY, width: 12 }}>{hasTx ? (open ? "▾" : "▸") : ""}</span>
+          <span className="text-sm font-medium" style={{ color: "#F3F1FB" }}>{call.name ?? call.phone ?? "—"}</span>
+          <span className="text-xs" style={{ color: GREY }}>{clockIST(call.created_at)}</span>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {call.duration_s > 0 && <span className="text-xs" style={{ color: GREY, fontVariantNumeric: "tabular-nums" }}>{mmss(call.duration_s)}</span>}
+          <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: p.bg, color: p.color }}>{p.label}</span>
+        </div>
+      </button>
+      {open && hasTx && (
+        <div className="pb-4 pl-6 pr-1 flex flex-col gap-2">
+          {call.transcript.map((t, i) => {
+            const isAgent = t.role === "assistant";
+            return (
+              <div key={i} className="flex flex-col" style={{ alignItems: isAgent ? "flex-start" : "flex-end" }}>
+                <span className="text-[10px] uppercase tracking-[0.1em] mb-0.5" style={{ color: GREY }}>{isAgent ? "Mello" : "Caller"}</span>
+                <span
+                  className="text-sm px-3 py-2 rounded-2xl max-w-[80%]"
+                  style={{
+                    background: isAgent ? "#20183C" : "rgba(167,139,250,0.14)",
+                    color: "#E9E6F6",
+                    borderTopLeftRadius: isAgent ? 4 : undefined,
+                    borderTopRightRadius: isAgent ? undefined : 4,
+                  }}
+                >
+                  {t.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Kpi({ label, value, subtext, accent }: { label: string; value: string; subtext: string; accent?: string }) {
   return (
@@ -75,6 +129,8 @@ export function OutboundView() {
   const [selected, setSelected] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<OutboundMetrics | null>(null);
   const [contacts, setContacts] = useState<OutboundContact[]>([]);
+  const [calls, setCalls] = useState<OutboundCall[]>([]);
+  const [openCall, setOpenCall] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -104,12 +160,14 @@ export function OutboundView() {
     let live = true;
     const load = async () => {
       try {
-        const [m, c] = await Promise.all([
+        const [m, c, k] = await Promise.all([
           fetch(`/api/outbound?resource=metrics&id=${selected}`, { cache: "no-store" }).then((r) => r.json()),
           fetch(`/api/outbound?resource=contacts&id=${selected}`, { cache: "no-store" }).then((r) => r.json()),
+          fetch(`/api/outbound?resource=calls&id=${selected}`, { cache: "no-store" }).then((r) => r.json()),
         ]);
         if (live && !m.error) setMetrics(m);
         if (live && Array.isArray(c)) setContacts(c);
+        if (live && Array.isArray(k)) setCalls(k);
       } catch {
         /* list refresh will surface backend errors */
       }
@@ -195,6 +253,15 @@ export function OutboundView() {
                   <Mini label="Spent" value={`${rupees(metrics.spent_inr)}${metrics.budget_cap_inr ? ` / ${rupees(metrics.budget_cap_inr)}` : ""}`} />
                   <Mini label="Opt-outs" value={`${metrics.opt_outs} (${metrics.opt_out_rate_pct}%)`} />
                 </div>
+              </div>
+
+              {/* Recent calls — one row per dial, newest first, expand for the transcript */}
+              <div className="rounded-2xl p-5 mb-4" style={CARD}>
+                <div className="text-[10px] tracking-[0.12em] uppercase mb-3" style={{ color: GREY }}>Recent calls</div>
+                {calls.length === 0 && <div className="text-sm py-3" style={{ color: GREY }}>No calls yet for this campaign.</div>}
+                {calls.map((call) => (
+                  <CallRow key={call.id} call={call} open={openCall === call.id} onToggle={() => setOpenCall((prev) => (prev === call.id ? null : call.id))} />
+                ))}
               </div>
 
               {/* Lead list */}

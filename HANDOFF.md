@@ -237,3 +237,61 @@ That's full context in <5 minutes. Then ask the user what they want, or proceed 
 - **Call-flow sales diagrams (Task 2, not built yet):** plan = Recraft.ai (illustrations) + Canva (assemble), one labelled pictorial strip per sector (clinics/salons/gyms/turfs) inbound+outbound; "lavender voice-line" concept; prompts already given to the user. Not started in code.
 
 *Last updated: 2026-06-24 — lavender/violet rebrand: WebGL audio orb hero, glass-orb logo, full dashboard recolour with cyan money-accent. Prior: 2026-06-22 outbound+Supabase unification.*
+
+---
+
+## Session 2026-07-01 — purple site SHIPPED LIVE + outbound agent latency/quality overhaul
+
+### ▶▶ START HERE NEXT SESSION: the OUTBOUND AGENT (mello-outbound) ◀◀
+This is what we were mid-flight on. The agent now **works for a live demo** (instant greeting, ~1–2s replies, multi-turn, completes the task itself, Hindi-English via Sarvam). Current goal: a **genuine "Namastey Salon" marketing call**.
+
+**Run it (PowerShell):**
+```powershell
+cd C:\Users\HARSHIT\OneDrive\Desktop\mello-outbound\backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000   # MUST use .venv python
+# ngrok (reserved domain) in another terminal — exe is at C:\Users\HARSHIT\OneDrive\Desktop\ngrok.exe:
+C:\Users\HARSHIT\OneDrive\Desktop\ngrok.exe http --domain=village-twine-strangle.ngrok-free.dev 8000
+```
+**Place a call** (allowlist permits ONLY Harshit's number `+918369851507`):
+```
+curl -X POST http://localhost:8000/clients/1/test-call -H "Content-Type: application/json" -d "{\"to\":\"+918369851507\",\"campaign_id\":6}"
+```
+Campaigns: `1`=booking_confirmation, `2`=membership_renewal, `4`=lead_qualification, `6`=promo_offer (the salon marketing one). Watch `backend_run.log`: `Generating TTS: [...]` = what Mello says, `CerebrasLLMService TTFB`, `Bot started/stopped speaking`, tool calls, `transcript=`.
+
+### What was fixed this session (outbound)
+1. **Latency 16s → ~1s.** Cerebras `zai-glm-4.7` is a *reasoning* model (thinks before speaking); Sarvam's own LLMs (`sarvam-30b/105b`) also reason heavily (5s+, never emit `content`) — both unusable for voice. **Fix: `CEREBRAS_MODEL=gemma-4-31b`** in `mello-outbound/backend/.env` (non-reasoning, ~0.4–1s TTFT, does tool-calls, great Hinglish). Cerebras models on this key: `zai-glm-4.7`, `gpt-oss-120b`, `gemma-4-31b`. **KEPT Sarvam STT+TTS = the Hinglish moat** (research: OpenAI Realtime/global S2S are *worse* at Hinglish, 22–34% WER — do NOT move STT/TTS off Sarvam).
+2. **"Agent does it, not a team."** `app/voice/outbound_tools.py` `log_interest` message → "I've set that up for you right now… confirmation on WhatsApp." Added a system-prompt rule in `app/voice/outbound_prompts.py` (Mello acts itself, never defers to a human team; only `transfer_to_human` if asked).
+3. **Offer injection.** `build_outbound_system_prompt` now feeds context `service`/`offer`/`when` into the prompt (`# What you know` block) so the agent pitches a *specific* offer.
+4. **Salon rebrand (`demo.db`):** Client 1 `business_name` → **"Namastey Salon"**; Monsoon Glow offer set on contact 30.
+
+### ⚠️ IMMEDIATE NEXT STEP (where we stopped)
+`/test-call` picks a *fresh pending contact* (it grabbed contact **43**, not contact 30) → the salon **offer context wasn't applied** to the call that ran. **Fix: set the Monsoon Glow offer `context_json` on ALL campaign-6 contacts** (so whichever is picked has it), then re-fire `campaign_id=6`. Use `service`="hair spa & facial", `offer`="our Monsoon Glow special — 40% off any hair spa or facial, plus a complimentary head massage, all through this month".
+
+### Outbound gotchas
+- **Cold start:** first call after a restart reloads Silero VAD + Smart Turn v3 (~5–8s) → greeting lags once. **Warm with one throwaway call before demoing.**
+- **Turn-detection adds ~1.2s** after the caller stops (Smart Turn + endpointing) — not tuned; reply feels ~2–3s. Lower VAD `stop_secs` / lighten turn model if crisper needed.
+- One `transcript=None` (dropped Sarvam STT turn) seen — intermittent.
+- Cerebras/Sarvam free tier fine for a single demo; can rate-limit under volume.
+- uvicorn does NOT auto-reload — restart after any code/.env change.
+
+### Website (mello.ai) — SHIPPED to `main`, LIVE on melloai.in
+- **Domain LIVE:** melloai.in (GoDaddy DNS → Vercel A `76.76.21.21` + CNAME `cname.vercel-dns.com`). `SITE.domain` = `melloai.in`.
+- **Hero reverted** from the WebGL orb to the **conversation/call-panel** (orb experiments parked in `Orb3D.tsx`, unused); renders lavender via tokens.
+- **Brand:** AA-safe violet CTA `#7c3aed`, gold accent `#f5b544`, violet-black stage `#160f1e`, **Bricolage Grotesque** display font, glowing-violet `CustomCursor`, pure-CSS hero load-in (`.hero-rise`).
+- **New pages:** `/about`, `/contact` (real routes + nav links) with `.aurora` bg, `SplitReveal` headlines, `Spotlight` cards. New `Outbound.tsx` homepage section. Nav in `src/lib/site.ts` (`NAV_LINKS`); `Nav.tsx` handles `/route` vs `#anchor`.
+- **Motion:** `SlidingNumber` counter, `TextLoop` (rotating verticals), `ScrollProgress` (top bar, hidden on /dashboard), `.text-shimmer` on the 24/7 pill.
+- **`/dashboard` gated:** `src/proxy.ts` redirects /dashboard → home on public domains (melloai.in, *.vercel.app); works on localhost. **Interim — replace with real per-client Supabase auth later.**
+- **Dashboard recolored** cyan → gold (`#F5B544` family); violet/rose/dark kept (8 files, inline hex).
+- **Socials:** Instagram `instagram.com/mellooo.ai`; **X removed**. ⚠️ **LinkedIn still placeholder** (`linkedin.com/company/mello-ai`). **Email** `support@melloai.in` (GoDaddy "Professional Email by Titan", mailbox being created).
+- Build gotcha: `next build` type-checks (dev/Turbopack doesn't) — fixed `LucideIcon` typings + `Reveal`/`SplitReveal` via `createElement`. Clear `.next` if `EPERM unlink` (OneDrive lock) build error.
+
+### Lead-scraper (committed to `main`, `lead-scraper/`)
+Pure-stdlib Python lead-gen. Produced **5,684 deduped callable companies** → `lead-scraper/exports/mello_leads_callable_*.csv` + per-metro splits. OSM seed (free) + website scrape + optional Google Places (key-gated; demo key should be deleted). `leads.db`/`exports/`/`*.log` gitignored.
+
+### Website pending / parked
+- LinkedIn real URL + confirm `support@melloai.in` works.
+- SEO: Google Search Console + sitemap (planned next).
+- Pricing-section swap (old ₹ cards still there — user will pick a replacement section).
+- Mobile pass; delete stray `main` file in repo root.
+
+*Last updated: 2026-07-01 — SHIPPED purple site live to melloai.in (conversation hero, /about + /contact, Outbound section, motion, gold dashboard, dashboard gated); fixed outbound latency 16s→~1s via gemma-4-31b (kept Sarvam Hinglish) + "agent acts itself" + offer-injection; mid-flight on Namastey Salon marketing call (campaign 6) — NEXT: apply offer context to the picked contact, re-fire.*

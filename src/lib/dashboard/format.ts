@@ -28,3 +28,12 @@ export function clockFromSeconds(total: number): string {
 export function rupees(n: number): string {
   return `₹${n.toLocaleString("en-IN")}`;
 }
+
+/** ₹ compact for real-estate scale: ₹29.85 Cr / ₹95 L / ₹6,500. */
+export function rupeesCompact(n: number): string {
+  const abs = Math.abs(n);
+  const trim = (x: number) => (Math.round(x * 100) / 100).toString();
+  if (abs >= 1e7) return `₹${trim(n / 1e7)} Cr`;
+  if (abs >= 1e5) return `₹${trim(n / 1e5)} L`;
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}

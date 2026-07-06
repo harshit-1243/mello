@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, Phone } from "lucide-react";
 import type { CallDetail } from "@/lib/dashboard/data";
-import { formatPhone, timeAgo, clockFromSeconds, rupees } from "@/lib/dashboard/format";
+import { formatPhone, timeAgo, clockFromSeconds, rupeesCompact } from "@/lib/dashboard/format";
 
 const GS = "var(--font-geist-sans)";
 type Filter = "All" | "Booked" | "Missed";
@@ -43,7 +43,7 @@ function CallRow({ call, selected, onClick }: { call: CallDetail; selected: bool
         <div className="flex items-center gap-2 mb-0.5">
           <span className="text-sm font-medium truncate" style={{ color: "#F3F1FB" }}>{call.name || formatPhone(call.phone)}</span>
           {call.isMember && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(167,139,250,0.1)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.18)" }}>member</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(167,139,250,0.1)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.18)" }}>lead</span>
           )}
         </div>
         <div className="text-xs truncate" style={{ color: "#8C86A8" }}>{call.intent}</div>
@@ -72,7 +72,7 @@ function DetailPanel({ call }: { call: CallDetail }) {
                 {call.name || formatPhone(call.phone)}
               </div>
               <div className="text-sm mb-1" style={{ color: "#8C86A8" }}>
-                {formatPhone(call.phone)} · {call.isMember ? "Member" : "Non-member"}
+                {formatPhone(call.phone)} · {call.isMember ? "Known lead" : "New caller"}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(126,144,138,0.15)", color: "#8C86A8" }}>
@@ -89,11 +89,11 @@ function DetailPanel({ call }: { call: CallDetail }) {
       {call.booking && (
         <div className="rounded-2xl px-5 py-4 shrink-0 flex items-center gap-4 flex-wrap"
           style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
-          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0" style={{ color: "#A78BFA" }}>Booking made</span>
+          <span className="text-[10px] tracking-[0.12em] uppercase shrink-0" style={{ color: "#A78BFA" }}>Site visit booked</span>
           <span className="text-sm" style={{ color: "#F3F1FB" }}>{call.booking.sport} · {call.booking.court}</span>
           <span className="text-sm" style={{ color: "#C2BCE0" }}>{call.booking.when}</span>
           <span className="text-sm font-medium ml-auto" style={{ color: "#F5B544" }}>
-            {call.booking.amountInr === 0 ? "Member · ₹0" : rupees(call.booking.amountInr)}
+            {rupeesCompact(call.booking.amountInr)}
           </span>
         </div>
       )}
@@ -181,7 +181,7 @@ export function CallsView({ calls }: { calls: CallDetail[] }) {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-sm gap-2" style={{ color: "#8C86A8" }}>
               <Phone size={24} style={{ color: "#2A2348" }} />
-              No calls match this filter.
+              No enquiries match this filter.
             </div>
           ) : (
             filtered.map((call) => (
@@ -196,7 +196,7 @@ export function CallsView({ calls }: { calls: CallDetail[] }) {
         {selected ? (
           <DetailPanel call={selected} />
         ) : (
-          <div className="flex items-center justify-center h-full text-sm" style={{ color: "#8C86A8" }}>Select a call to see its transcript.</div>
+          <div className="flex items-center justify-center h-full text-sm" style={{ color: "#8C86A8" }}>Select an enquiry to see its transcript.</div>
         )}
       </div>
     </div>

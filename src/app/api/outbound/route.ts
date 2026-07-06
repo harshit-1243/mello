@@ -5,9 +5,10 @@
  *   GET /api/outbound?resource=campaigns
  *   GET /api/outbound?resource=metrics&id=2
  *   GET /api/outbound?resource=contacts&id=2
+ *   GET /api/outbound?resource=calls&id=2
  */
 import { NextResponse } from "next/server";
-import { getCampaigns, getCampaignMetrics, getCampaignContacts } from "@/lib/dashboard/outbound";
+import { getCampaigns, getCampaignMetrics, getCampaignContacts, getCampaignCalls } from "@/lib/dashboard/outbound";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export async function GET(request: Request) {
     if (resource === "contacts") {
       if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
       return NextResponse.json(await getCampaignContacts(id));
+    }
+    if (resource === "calls") {
+      if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
+      return NextResponse.json(await getCampaignCalls(id));
     }
     return NextResponse.json({ error: "unknown resource" }, { status: 400 });
   } catch (e) {

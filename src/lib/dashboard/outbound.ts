@@ -70,6 +70,19 @@ export type OutboundContact = {
   attempt_count: number;
 };
 
+export type TranscriptTurn = { ts?: string; role: string; text: string };
+
+export type OutboundCall = {
+  id: number;
+  name: string | null;
+  phone: string;
+  disposition: string | null;
+  answered: boolean;
+  duration_s: number;
+  created_at: string;
+  transcript: TranscriptTurn[];
+};
+
 // ---- FastAPI source (Phase 1) ----
 
 async function fastapi<T>(path: string): Promise<T> {
@@ -158,6 +171,45 @@ export async function getCampaignMetrics(id: number): Promise<OutboundMetrics> {
 export async function getCampaignContacts(id: number): Promise<OutboundContact[]> {
   if (SOURCE === "supabase") return sbContacts(id);
   return fastapi<OutboundContact[]>(`/campaigns/${id}/contacts`);
+}
+
+/**
+ * Per-call feed for one campaign — one row per dial, newest first, each carrying the caller's
+ * name (joined from the contact) and the full transcript. Resilient: if the transcript column
+ * isn't there yet (migration 005 not run) or the source is FastAPI, returns [] rather than erroring.
+ */
+export async function getCampaignCalls(id: number, limit = 25): Promise<OutboundCall[]> {
+  if (SOURCE !== "supabase" || !db) return [];
+  try {
+    const cols = "id, answered, disposition, duration_s, created_at, outbound_contacts(name, phone)";
+    // Prefer the version with transcripts; if migration 005 hasn't run, retry without so the feed
+    // (name · time · outcome) still shows — transcripts just stay empty until the column exists.
+    let { data, error } = await db.from("outbound_call_attempts")
+      .select(`${cols}, transcript`)
+      .eq("campaign_id", id).order("created_at", { ascending: false }).limit(limit);
+    if (error) {
+      ({ data, error } = await db.from("outbound_call_attempts")
+        .select(cols)
+        .eq("campaign_id", id).order("created_at", { ascending: false }).limit(limit));
+      if (error) return [];
+    }
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const contact = (r.outbound_contacts ?? {}) as { name?: string | null; phone?: string };
+      const t = r.transcript;
+      return {
+        id: r.id as number,
+        name: contact.name ?? null,
+        phone: contact.phone ?? "",
+        disposition: (r.disposition as string | null) ?? null,
+        answered: Boolean(r.answered),
+        duration_s: (r.duration_s as number) ?? 0,
+        created_at: (r.created_at as string) ?? "",
+        transcript: Array.isArray(t) ? (t as TranscriptTurn[]) : [],
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 /** True when the configured source is reachable — lets the UI show a clear "backend offline" state. */

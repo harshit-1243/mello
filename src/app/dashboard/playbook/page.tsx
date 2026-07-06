@@ -15,14 +15,14 @@ interface Rule {
 }
 
 const INITIAL_RULES: Rule[] = [
-  { id: "hours",          icon: Clock,       title: "Operating Hours",       label: "Mello answers calls within this window only",     value: "8:00 AM – 12:00 AM, all week",                        active: true },
-  { id: "courts",         icon: Dumbbell,    title: "Sports & Courts",       label: "Available courts mello can book",                 value: "Badminton ×3, Pickleball ×2, Box Cricket ×1",         active: true },
-  { id: "pricing",        icon: IndianRupee, title: "Pricing",               label: "Default rates communicated on call",              value: "Badminton ₹600/hr · Non-member · Members free",       active: true },
-  { id: "member-windows", icon: Lock,        title: "Member-Only Windows",   label: "Slots reserved exclusively for members",          value: "8–10 AM & 9–11 PM · released 30 min prior",          active: true },
-  { id: "group-conflict", icon: Users,       title: "Group Conflict Rule",   label: "Blocks back-to-back group bookings",              value: "±2 hours, same sport, same group",                    active: true },
-  { id: "court-assign",   icon: Shuffle,     title: "Court Assignment",      label: "How courts are allocated",                        value: "Auto-assigned · never spoken on call",                active: true },
-  { id: "payment",        icon: CreditCard,  title: "Payment",               label: "How customers pay for bookings",                  value: "Razorpay link via WhatsApp, or pay-at-venue",         active: true },
-  { id: "cancellation",   icon: X,           title: "Cancellation",          label: "Free cancellation policy window",                 value: "Free up to 2 hrs before slot",                        active: true },
+  { id: "hours",          icon: Clock,       title: "Sales Office Hours",    label: "Mello answers enquiries within this window",      value: "10:00 AM – 8:00 PM, all week",                        active: true },
+  { id: "courts",         icon: Dumbbell,    title: "Project & Inventory",   label: "Units Mello can pitch on a call",                 value: "Studio, 2, 3 & 4 BHK · Navi Mumbai launch",           active: true },
+  { id: "pricing",        icon: IndianRupee, title: "Pricing",               label: "Starting prices shared on call",                  value: "2 BHK ₹95L · 3 BHK ₹1.45Cr · 4 BHK ₹2.6Cr onwards",   active: true },
+  { id: "member-windows", icon: Lock,        title: "Site-Visit Slots",      label: "Visit slots Mello can offer",                     value: "Daily 10 AM – 7 PM · cab pick-up & drop",             active: true },
+  { id: "group-conflict", icon: Users,       title: "Channel-Partner Rule",  label: "Attributes a visit to the referring partner",     value: "Tag the partner · protect their lead",                active: true },
+  { id: "court-assign",   icon: Shuffle,     title: "Unit Allocation",       label: "How units are shown to a lead",                   value: "Best-fit by budget · full price sheet on WhatsApp",   active: true },
+  { id: "payment",        icon: CreditCard,  title: "Booking Amount",        label: "How the token / EOI is collected",                value: "Razorpay EOI link via WhatsApp",                      active: true },
+  { id: "cancellation",   icon: X,           title: "Follow-up",             label: "When Mello follows up after a visit",             value: "Auto call + WhatsApp 1 day after the visit",          active: true },
 ];
 
 function RuleCard({ rule, onSave }: { rule: Rule; onSave: (id: string, value: string) => void }) {

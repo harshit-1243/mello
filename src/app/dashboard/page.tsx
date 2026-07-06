@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bell, Search } from "lucide-react";
 import { getOverview } from "@/lib/dashboard/data";
-import { formatPhone, timeAgo, rupees } from "@/lib/dashboard/format";
+import { formatPhone, timeAgo, rupeesCompact } from "@/lib/dashboard/format";
 
 const GS = "var(--font-geist-sans)";
 
@@ -38,13 +38,13 @@ export default async function OverviewPage() {
           <h1 style={{ fontFamily: GS, fontSize: 56, fontWeight: 400, color: "#F3F1FB", lineHeight: 1.05, letterSpacing: "-0.025em", margin: 0 }}>
             Overview
           </h1>
-          <p className="mt-2 text-sm" style={{ color: "#8C86A8" }}>Your AI receptionist · answering and booking</p>
+          <p className="mt-2 text-sm" style={{ color: "#8C86A8" }}>Your AI sales desk · answering enquiries and booking site visits</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
             style={{ background: "#181030", border: "1px solid #2A2348", color: "#8C86A8", width: 220 }}>
             <Search size={14} />
-            <span className="flex-1 text-xs">Search calls, members…</span>
+            <span className="flex-1 text-xs">Search enquiries, leads…</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#20183C", color: "#8C86A8", border: "1px solid #2A2348" }}>⌘K</span>
           </div>
           <button className="relative w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#181030", border: "1px solid #2A2348" }}>
@@ -55,10 +55,10 @@ export default async function OverviewPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Calls Today"    value={String(stats.callsToday)} subtext={`${stats.answered} answered`} />
-        <KpiCard label="Answer Rate"    value={`${stats.answerRatePct}%`} subtext={`${stats.answered} of ${stats.callsToday} answered`} />
-        <KpiCard label="Bookings Made"  value={String(stats.bookingsMade)} subtext={`${stats.bookingsMade - stats.bookingsMember} non-member · ${stats.bookingsMember} member`} />
-        <KpiCard label="Revenue Booked" value={rupees(stats.revenueBookedInr)} subtext={`${stats.bookingsMade - stats.bookingsMember} to collect at venue`} accent="#F5B544" />
+        <KpiCard label="Enquiries Today" value={String(stats.callsToday)} subtext={`${stats.answered} answered`} />
+        <KpiCard label="Answer Rate"     value={`${stats.answerRatePct}%`} subtext={`${stats.answered} of ${stats.callsToday} answered`} />
+        <KpiCard label="Site Visits"     value={String(stats.bookingsMade)} subtext={`${stats.bookingsMade - stats.bookingsMember} new · ${stats.bookingsMember} repeat lead`} />
+        <KpiCard label="Pipeline Value"  value={rupeesCompact(stats.revenueBookedInr)} subtext={`across ${stats.bookingsMade} booked visit${stats.bookingsMade === 1 ? "" : "s"}`} accent="#F5B544" />
       </div>
 
       {/* Activity + Upcoming */}
@@ -69,7 +69,7 @@ export default async function OverviewPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] tracking-[0.12em] uppercase mb-0.5" style={{ color: "#8C86A8" }}>Activity</div>
-              <div className="text-sm font-medium" style={{ color: "#F3F1FB" }}>Recent Calls</div>
+              <div className="text-sm font-medium" style={{ color: "#F3F1FB" }}>Recent Enquiries</div>
             </div>
             <Link href="/dashboard/calls" className="text-xs" style={{ color: "#A78BFA" }}>View all →</Link>
           </div>
@@ -99,7 +99,7 @@ export default async function OverviewPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] tracking-[0.12em] uppercase mb-0.5" style={{ color: "#8C86A8" }}>Up Next</div>
-              <div className="text-sm font-medium" style={{ color: "#F3F1FB" }}>Upcoming Bookings</div>
+              <div className="text-sm font-medium" style={{ color: "#F3F1FB" }}>Upcoming Site Visits</div>
             </div>
             <Link href="/dashboard/bookings" className="text-xs" style={{ color: "#A78BFA" }}>Calendar →</Link>
           </div>

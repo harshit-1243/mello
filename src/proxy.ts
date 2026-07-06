@@ -15,12 +15,11 @@ import { authConfigured } from "@/lib/supabase/config";
  */
 export async function proxy(request: NextRequest) {
   // INTERIM: the demo dashboard isn't gated by login yet, so don't expose it on
-  // any public domain. Allow it only on localhost (the operator's own machine);
-  // redirect everywhere else (melloai.in, *.vercel.app) to home. Remove this
-  // block once proper per-client auth is set up.
+  // the public domains. Block melloai.in + *.vercel.app; allow localhost / dev /
+  // preview hosts. Remove this block once proper per-client auth is set up.
   const host = request.nextUrl.hostname;
-  const isLocal = host === "localhost" || host === "127.0.0.1";
-  if (!isLocal && request.nextUrl.pathname.startsWith("/dashboard")) {
+  const isPublic = host.endsWith("melloai.in") || host.endsWith("vercel.app");
+  if (isPublic && request.nextUrl.pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

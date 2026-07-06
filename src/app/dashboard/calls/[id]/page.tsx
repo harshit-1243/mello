@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCall } from "@/lib/dashboard/data";
-import { formatPhone, timeAgo, clockFromSeconds, rupees } from "@/lib/dashboard/format";
+import { formatPhone, timeAgo, clockFromSeconds, rupeesCompact } from "@/lib/dashboard/format";
 
 const GS = "var(--font-geist-sans)";
 
@@ -19,7 +19,7 @@ export default async function CallDetailPage({ params }: PageProps<"/dashboard/c
         style={{ color: "#8C86A8" }}
         onMouseEnter={undefined}
         onMouseLeave={undefined}>
-        ← Live Calls
+        ← Enquiries
       </Link>
 
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -28,7 +28,7 @@ export default async function CallDetailPage({ params }: PageProps<"/dashboard/c
             {formatPhone(call.phone)}
             {call.name && <span style={{ color: "#8C86A8" }}> · {call.name}</span>}
             {call.isMember && (
-              <span className="ml-3 text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.2)", verticalAlign: "middle" }}>member</span>
+              <span className="ml-3 text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.2)", verticalAlign: "middle" }}>lead</span>
             )}
           </h1>
           <p className="mt-2 text-sm" style={{ color: "#8C86A8" }}>
@@ -73,13 +73,13 @@ export default async function CallDetailPage({ params }: PageProps<"/dashboard/c
         <div className="flex flex-col gap-4">
           {call.booking && (
             <div className="rounded-2xl overflow-hidden" style={{ background: "#181030", border: "1px solid #2A2348" }}>
-              <div className="px-5 py-4 text-sm font-medium" style={{ color: "#F3F1FB", borderBottom: "1px solid #20183C" }}>Booking made</div>
+              <div className="px-5 py-4 text-sm font-medium" style={{ color: "#F3F1FB", borderBottom: "1px solid #20183C" }}>Site visit booked</div>
               <div className="space-y-2.5 p-5 text-sm">
                 {[
-                  { label: "Sport", value: call.booking.sport },
-                  { label: "Court", value: call.booking.court },
+                  { label: "Unit", value: call.booking.sport },
+                  { label: "Tower", value: call.booking.court },
                   { label: "When", value: call.booking.when },
-                  { label: "Amount", value: call.booking.amountInr === 0 ? "Member — ₹0" : rupees(call.booking.amountInr) },
+                  { label: "Value", value: rupeesCompact(call.booking.amountInr) },
                   { label: "Source", value: call.booking.source },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between gap-4">
@@ -89,7 +89,7 @@ export default async function CallDetailPage({ params }: PageProps<"/dashboard/c
                 ))}
               </div>
               <div className="px-5 py-3 text-xs" style={{ color: "#8C86A8", borderTop: "1px solid #20183C" }}>
-                Court is shown here for staff — it is never spoken on the call, only sent in the WhatsApp confirmation.
+                Unit &amp; tower are shown here for the sales team — the full price sheet and floor plan go out on WhatsApp.
               </div>
             </div>
           )}

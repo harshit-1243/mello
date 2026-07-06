@@ -22,7 +22,7 @@ function joinedLabel(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return `Joined ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(d)}`;
+  return new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(d);
 }
 
 function MemberCard({ m, idx, groups }: { m: MemberRow; idx: number; groups: string[] }) {
@@ -60,11 +60,11 @@ function MemberCard({ m, idx, groups }: { m: MemberRow; idx: number; groups: str
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[13px] font-medium capitalize" style={{ color: "#F3F1FB" }}>{m.tier}</div>
-          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "#8C86A8" }}>Tier</div>
+          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "#8C86A8" }}>Stage</div>
         </div>
         <div className="text-right">
           <div className="text-[13px] font-medium" style={{ color: "#F3F1FB" }}>{joinedLabel(m.joinedAt)}</div>
-          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "#8C86A8" }}>Membership</div>
+          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "#8C86A8" }}>Added</div>
         </div>
       </div>
     </div>
@@ -87,11 +87,11 @@ export function MembersView({ members, groups }: { members: MemberRow[]; groups:
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl flex-1 max-w-sm" style={{ background: "#181030", border: "1px solid #2A2348" }}>
           <Search size={15} style={{ color: "#8C86A8" }} />
-          <input type="text" placeholder="Search members…" value={query} onChange={(e) => setQuery(e.target.value)}
+          <input type="text" placeholder="Search leads…" value={query} onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none placeholder-[#8C86A8]" style={{ color: "#F3F1FB" }} />
         </div>
         <div className="flex items-center gap-3 ml-auto">
-          {[{ label: "Total", value: members.length }, { label: "Active", value: activeCount }, { label: "Groups", value: groups.length }].map((s) => (
+          {[{ label: "Total", value: members.length }, { label: "Active", value: activeCount }, { label: "Partners", value: groups.length }].map((s) => (
             <div key={s.label} className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: "#181030", border: "1px solid #2A2348" }}>
               <div>
                 <div style={{ fontFamily: GS, fontSize: 22, fontWeight: 400, color: "#F3F1FB", lineHeight: 1, letterSpacing: "-0.02em" }}>{s.value}</div>
@@ -110,7 +110,7 @@ export function MembersView({ members, groups }: { members: MemberRow[]; groups:
         <div className="flex flex-col items-center justify-center py-24 rounded-2xl text-sm gap-2"
           style={{ background: "#181030", border: "1px solid #2A2348", color: "#8C86A8" }}>
           <Users size={28} style={{ color: "#2A2348" }} />
-          {members.length === 0 ? "No members yet." : `No members match "${query}"`}
+          {members.length === 0 ? "No leads yet." : `No leads match "${query}"`}
         </div>
       )}
     </div>

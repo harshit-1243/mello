@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Calendar, CalendarDays } from "lucide-react";
 import type { BookingRow } from "@/lib/dashboard/data";
-import { rupees } from "@/lib/dashboard/format";
+import { rupeesCompact } from "@/lib/dashboard/format";
 
 const GS = "var(--font-geist-sans)";
 
@@ -20,8 +20,8 @@ function SummaryTile({ label, value, sub, accent }: { label: string; value: stri
 
 const TypeChip = ({ member }: { member: boolean }) =>
   member
-    ? <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.2)" }}>Member</span>
-    : <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(126,144,138,0.12)", color: "#8C86A8", border: "1px solid #2A2348" }}>Non-member</span>;
+    ? <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.2)" }}>Repeat</span>
+    : <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(126,144,138,0.12)", color: "#8C86A8", border: "1px solid #2A2348" }}>New</span>;
 
 const SourceChip = ({ source }: { source: string }) =>
   source === "mello"
@@ -36,16 +36,16 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
 
   const filtered = all.filter((b) => sportFilter === "All" || b.sport === sportFilter);
 
-  const revenue = all.reduce((sum, b) => sum + (b.member ? 0 : b.amountInr), 0);
+  const revenue = all.reduce((sum, b) => sum + b.amountInr, 0);   // pipeline value across all visits
   const melloCount = all.filter((b) => b.source === "mello").length;
 
   return (
     <div className="flex-1 px-9 py-7 space-y-6">
       {/* Summary tiles */}
       <div className="flex gap-4">
-        <SummaryTile label="Upcoming" value={String(upcoming.length)} sub="bookings ahead" />
+        <SummaryTile label="Upcoming" value={String(upcoming.length)} sub="site visits ahead" />
         <SummaryTile label="Total" value={String(all.length)} sub={`${melloCount} booked by Mello`} />
-        <SummaryTile label="Revenue booked" value={rupees(revenue)} sub="non-member · to collect at venue" accent="#F5B544" />
+        <SummaryTile label="Pipeline value" value={rupeesCompact(revenue)} sub="across all booked visits" accent="#F5B544" />
       </div>
 
       {/* Table card */}
@@ -57,7 +57,7 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
             <button onClick={() => setSportOpen((v) => !v)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{ background: "#20183C", border: sportOpen ? "1px solid rgba(167,139,250,0.3)" : "1px solid #2A2348", color: sportFilter === "All" ? "#8C86A8" : "#F3F1FB" }}>
               <Calendar size={12} style={{ color: sportFilter === "All" ? "#8C86A8" : "#A78BFA" }} />
-              {sportFilter === "All" ? "All Sports" : sportFilter}
+              {sportFilter === "All" ? "All Units" : sportFilter}
               <ChevronDown size={12} style={{ color: "#8C86A8", transform: sportOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }} />
             </button>
             {sportOpen && (
@@ -69,14 +69,14 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
                     style={{ color: sportFilter === s ? "#A78BFA" : "#8C86A8", background: sportFilter === s ? "rgba(167,139,250,0.08)" : "transparent" }}
                     onMouseEnter={(e) => { if (sportFilter !== s) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)"; }}
                     onMouseLeave={(e) => { if (sportFilter !== s) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
-                    {s === "All" ? "All Sports" : s}
+                    {s === "All" ? "All Units" : s}
                   </button>
                 ))}
               </div>
             )}
           </div>
           <div className="flex-1" />
-          <span className="text-xs" style={{ color: "#8C86A8" }}>{filtered.length} booking{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-xs" style={{ color: "#8C86A8" }}>{filtered.length} site visit{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Table */}
@@ -84,7 +84,7 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr style={{ borderBottom: "1px solid #20183C" }}>
-                {["Date", "Time", "Customer", "Type", "Sport", "Court", "Amount", "Source"].map((col) => (
+                {["Date", "Time", "Lead", "Type", "Unit", "Tower", "Value", "Source"].map((col) => (
                   <th key={col} className="text-left px-4 py-3 text-[10px] tracking-[0.1em] uppercase font-medium" style={{ color: "#8C86A8" }}>{col}</th>
                 ))}
               </tr>
@@ -100,7 +100,7 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
                   <td className="px-4 py-3.5"><TypeChip member={b.member} /></td>
                   <td className="px-4 py-3.5"><span style={{ color: "#C2BCE0", fontSize: 13 }}>{b.sport}</span></td>
                   <td className="px-4 py-3.5"><span style={{ color: "#8C86A8", fontSize: 13 }}>{b.court}</span></td>
-                  <td className="px-4 py-3.5"><span style={{ color: "#F3F1FB", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 13 }}>{b.member ? "₹0" : rupees(b.amountInr)}</span></td>
+                  <td className="px-4 py-3.5"><span style={{ color: "#F3F1FB", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 13 }}>{rupeesCompact(b.amountInr)}</span></td>
                   <td className="px-4 py-3.5"><SourceChip source={b.source} /></td>
                 </tr>
               ))}
@@ -109,7 +109,7 @@ export function BookingsView({ upcoming, past }: { upcoming: BookingRow[]; past:
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-sm gap-2" style={{ color: "#8C86A8" }}>
               <CalendarDays size={24} style={{ color: "#2A2348" }} />
-              No bookings match this filter.
+              No site visits match this filter.
             </div>
           )}
         </div>

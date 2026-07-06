@@ -58,16 +58,13 @@ function dateLabel(date: string): string {
   );
 }
 
-// Non-member ₹/hr by sport (members = 0). Mirrors the facility config.
-const PRICE_PER_HOUR: Record<string, number> = { badminton: 600, tennis: 1200, pickleball: 600, basketball: 1600 };
-function bookingAmount(sport: string, start: string, end: string, isMember: boolean, mode?: string | null): number {
-  if (isMember) return 0;
-  let perHour = PRICE_PER_HOUR[sport] ?? 0;
-  if (sport === "basketball" && mode === "half") perHour = 800;
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  const hours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-  return Math.round(perHour * Math.max(hours, 0));
+// Ticket price (₹) by unit type — the deal value tied to a booked site visit.
+// (Real-estate: a "booking" = a site-visit / unit interest; its value = the unit's price.)
+const UNIT_PRICE: Record<string, number> = {
+  "studio": 6500000, "1 bhk": 7500000, "2 bhk": 9500000, "3 bhk": 14500000, "4 bhk": 26000000,
+};
+function bookingAmount(unitType: string, _start: string, _end: string, _isMember: boolean, _mode?: string | null): number {
+  return UNIT_PRICE[(unitType || "").toLowerCase()] ?? 0;
 }
 
 function statusFromOutcome(outcome: string | null, hasTranscript: boolean): CallStatus {
@@ -336,14 +333,15 @@ export async function loadOverview(facilityId: string): Promise<Overview | null>
     for (const b of made) {
       const isMember = names.has(b.booked_by_phone ?? "");
       if (isMember) bookingsMember++;
-      else
-        revenueBookedInr += bookingAmount(
-          b.sport as string,
-          b.start_time as string,
-          b.end_time as string,
-          false,
-          b.basketball_mode as string | null,
-        );
+      // Pipeline value = ticket price of every booked site visit (real-estate has no
+      // "member = free" concept; a known lead's visit still carries deal value).
+      revenueBookedInr += bookingAmount(
+        b.sport as string,
+        b.start_time as string,
+        b.end_time as string,
+        false,
+        b.basketball_mode as string | null,
+      );
     }
     const stats: OverviewStats = {
       callsToday,
@@ -434,10 +432,7 @@ export async function loadSettings(facilityId: string): Promise<SettingsView | n
     const sports = rawSports.map((s) => {
       const courts = Array.isArray(s.courts) ? (s.courts as unknown[]).length : 0;
       const p = (s.pricing_per_hour_inr ?? {}) as Record<string, number>;
-      const priceLabel =
-        s.id === "basketball"
-          ? `${inr(p.full_non_member ?? 0)}/hr full · ${inr(p.half_non_member ?? 0)} half`
-          : `${inr(p.non_member ?? 0)}/hr`;
+      const priceLabel = `${inr(p.non_member ?? 0)} onwards`;   // real-estate: starting ticket price
       return { name: (s.name as string) ?? cap((s.id as string) ?? ""), courts, priceLabel };
     });
 
@@ -539,10 +534,9 @@ export async function loadReports(facilityId: string): Promise<ReportData | null
       hourCounts.set(hr, (hourCounts.get(hr) ?? 0) + 1);
       const isMember = names.has(b.booked_by_phone ?? "");
       if (isMember) member++;
-      else {
-        nonMember++;
-        revenueInr += bookingAmount(b.sport as string, b.start_time as string, b.end_time as string, false, b.basketball_mode as string | null);
-      }
+      else nonMember++;
+      // Pipeline value across all booked site visits (deal value per unit).
+      revenueInr += bookingAmount(b.sport as string, b.start_time as string, b.end_time as string, false, b.basketball_mode as string | null);
     }
 
     const cfg = (facility.config ?? {}) as Record<string, unknown>;
@@ -573,13 +567,12 @@ function cap(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
-/** "badminton_2" → "Court 2"; "basketball_full" → "Full court"; "*_half_a" → "Half A". */
+/** "tower_a" → "Tower A"; "tower_3" → "Tower 3". Real-estate tower/wing label. */
 function courtLabel(courtId: string): string {
-  if (courtId.endsWith("_full")) return "Full court";
-  const half = courtId.match(/_half_([ab])$/);
-  if (half) return `Half ${half[1].toUpperCase()}`;
+  const t = courtId.match(/^tower_([a-z0-9]+)/i);
+  if (t) return `Tower ${t[1].toUpperCase()}`;
   const n = courtId.match(/_(\d+)$/);
-  return n ? `Court ${n[1]}` : courtId;
+  return n ? `Tower ${n[1]}` : courtId;
 }
 
 /** Render a tool call's args/result into a one-line human summary. */

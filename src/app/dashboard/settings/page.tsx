@@ -5,8 +5,8 @@ import { Bell, Play, ChevronDown, Save, Clock, Dumbbell, IndianRupee, Lock, User
 
 const GS = "var(--font-geist-sans)";
 
-type Section = "Facility" | "Sports & Pricing" | "Members" | "Payments" | "WhatsApp" | "Voice" | "Team" | "Data & Privacy";
-const SECTIONS: Section[] = ["Facility", "Sports & Pricing", "Members", "Payments", "WhatsApp", "Voice", "Team", "Data & Privacy"];
+type Section = "Facility" | "Units & Pricing" | "Leads" | "Payments" | "WhatsApp" | "Voice" | "Team" | "Data & Privacy";
+const SECTIONS: Section[] = ["Facility", "Units & Pricing", "Leads", "Payments", "WhatsApp", "Voice", "Team", "Data & Privacy"];
 
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
   return (
@@ -66,10 +66,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function FacilityForm() {
-  const [name, setName] = useState("Smash Arena");
-  const [address, setAddress] = useState("Andheri W, Mumbai");
-  const [hoursFrom, setHoursFrom] = useState("8:00 AM");
-  const [hoursTo, setHoursTo] = useState("12:00 AM");
+  const [name, setName] = useState("Paradise Group");
+  const [address, setAddress] = useState("Vashi, Navi Mumbai");
+  const [hoursFrom, setHoursFrom] = useState("10:00 AM");
+  const [hoursTo, setHoursTo] = useState("8:00 PM");
   const [timezone, setTimezone] = useState("Asia/Kolkata (IST, UTC+5:30)");
   const [afterHours, setAfterHours] = useState(true);
   const [whatsapp, setWhatsapp] = useState(true);
@@ -152,8 +152,8 @@ function FacilityForm() {
       <div className="flex flex-col gap-0">
         <SectionLabel>Behaviour</SectionLabel>
         <Toggle label="Answer after-hours" sub="Mello picks up calls outside your operating hours" checked={afterHours} onChange={setAfterHours} />
-        <Toggle label="Send WhatsApp confirmations" sub="Booking confirmations sent via WhatsApp after every call" checked={whatsapp} onChange={setWhatsapp} />
-        <Toggle label="Take Razorpay payments" sub="Send payment links during the call for immediate collection" checked={payments} onChange={setPayments} />
+        <Toggle label="Send WhatsApp confirmations" sub="Site-visit confirmations + floor plans sent via WhatsApp after every call" checked={whatsapp} onChange={setWhatsapp} />
+        <Toggle label="Collect EOI via Razorpay" sub="Send a token / EOI payment link during the call" checked={payments} onChange={setPayments} />
       </div>
 
       <div className="flex flex-col gap-4 pt-2">
@@ -163,7 +163,7 @@ function FacilityForm() {
           <div>
             <div className="text-sm font-medium mb-1" style={{ color: "#F87171" }}>Delete all facility data</div>
             <div className="text-xs leading-relaxed" style={{ color: "#8C86A8" }}>
-              Permanently removes all bookings, member records, call logs, and AI settings for your facility. This action cannot be undone.
+              Permanently removes all site visits, lead records, call logs, and AI settings for your project. This action cannot be undone.
             </div>
           </div>
           <button className="shrink-0 px-3.5 py-2 rounded-lg text-xs font-medium transition-all"

@@ -46,6 +46,10 @@ next-env.d.ts
 /scripts/shots/
 /scripts/*.log
 
+# dev server logs
+/dev_run.log
+*_run.log
+
 # local-only editor config + ad-hoc diagnostic scripts
 .claude/settings.local.json
 /scripts/diag2.mjs

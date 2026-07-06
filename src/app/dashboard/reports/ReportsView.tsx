@@ -2,7 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from "recharts";
 import type { ReportData } from "@/lib/dashboard/data";
-import { rupees } from "@/lib/dashboard/format";
+import { rupeesCompact } from "@/lib/dashboard/format";
 
 const GS = "var(--font-geist-sans)";
 const GRID = "#20183C";
@@ -50,17 +50,17 @@ export function ReportsView({ data }: { data: ReportData }) {
     <div className="px-9 py-7 space-y-5">
       {/* KPI row */}
       <div className="flex gap-4">
-        <KpiTile label="Call → Booking" value={`${data.conversionPct}%`} sub={`${data.bookings} of ${data.calls} calls`} />
+        <KpiTile label="Enquiry → Visit" value={`${data.conversionPct}%`} sub={`${data.bookings} of ${data.calls} enquiries`} />
         <KpiTile label="Answer Rate" value={`${data.answerRatePct}%`} sub={`${data.answered} of ${data.calls} answered`} />
-        <KpiTile label="After-Hours Calls" value={String(data.afterHoursCalls)} sub="caught outside open hours" />
-        <KpiTile label="Revenue Booked" value={rupees(data.revenueInr)} sub={`non-member · last ${data.periodDays} days`} accent="#F5B544" />
+        <KpiTile label="After-Hours Enquiries" value={String(data.afterHoursCalls)} sub="caught outside office hours" />
+        <KpiTile label="Pipeline Value" value={rupeesCompact(data.revenueInr)} sub={`booked · last ${data.periodDays} days`} accent="#F5B544" />
       </div>
 
       {/* Row 1 */}
       <div className="grid grid-cols-2 gap-4">
-        <ChartCard title="Demand by Hour" caption="Booking starts by hour — your real peak windows.">
+        <ChartCard title="Demand by Hour" caption="Site-visit slots by hour — your real peak windows.">
           {byHour.length === 0 ? (
-            <div className="flex items-center justify-center h-[220px] text-sm" style={{ color: "#8C86A8" }}>No bookings in this period yet.</div>
+            <div className="flex items-center justify-center h-[220px] text-sm" style={{ color: "#8C86A8" }}>No site visits in this period yet.</div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={byHour} barSize={16} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -75,9 +75,9 @@ export function ReportsView({ data }: { data: ReportData }) {
           )}
         </ChartCard>
 
-        <ChartCard title="Bookings by Sport">
+        <ChartCard title="Site Visits by Unit">
           {data.bySport.length === 0 ? (
-            <div className="flex items-center justify-center h-[220px] text-sm" style={{ color: "#8C86A8" }}>No bookings yet.</div>
+            <div className="flex items-center justify-center h-[220px] text-sm" style={{ color: "#8C86A8" }}>No site visits yet.</div>
           ) : (
             <div className="flex flex-col gap-3 py-1">
               {data.bySport.map((d) => (
@@ -96,16 +96,16 @@ export function ReportsView({ data }: { data: ReportData }) {
 
       {/* Row 2 */}
       <div className="grid grid-cols-2 gap-4">
-        <ChartCard title="Member vs Non-member">
+        <ChartCard title="Repeat vs New leads">
           <div className="flex flex-col gap-5 py-2">
             <div className="flex items-end justify-between">
               <div>
                 <div style={{ fontFamily: GS, fontSize: 48, fontWeight: 400, color: VIOLET, lineHeight: 1, letterSpacing: "-0.02em" }}>{memberPct}%</div>
-                <div className="text-xs mt-1" style={{ color: "#8C86A8" }}>Member bookings</div>
+                <div className="text-xs mt-1" style={{ color: "#8C86A8" }}>Repeat leads</div>
               </div>
               <div className="text-right">
                 <div style={{ fontFamily: GS, fontSize: 48, fontWeight: 400, color: "#8C86A8", lineHeight: 1, letterSpacing: "-0.02em" }}>{nonMemberPct}%</div>
-                <div className="text-xs mt-1" style={{ color: "#8C86A8" }}>Non-member</div>
+                <div className="text-xs mt-1" style={{ color: "#8C86A8" }}>New leads</div>
               </div>
             </div>
             <div className="w-full h-3 rounded-full overflow-hidden flex" style={{ background: "#20183C" }}>
@@ -113,8 +113,8 @@ export function ReportsView({ data }: { data: ReportData }) {
               <div className="h-full rounded-r-full" style={{ width: `${nonMemberPct}%`, background: "#2A2348" }} />
             </div>
             <div className="flex items-center justify-between text-xs" style={{ color: "#8C86A8" }}>
-              <span><span style={{ color: "#F3F1FB", fontWeight: 600 }}>{data.memberMix.member}</span> by members</span>
-              <span><span style={{ color: "#F3F1FB", fontWeight: 600 }}>{data.memberMix.nonMember}</span> by non-members</span>
+              <span><span style={{ color: "#F3F1FB", fontWeight: 600 }}>{data.memberMix.member}</span> repeat leads</span>
+              <span><span style={{ color: "#F3F1FB", fontWeight: 600 }}>{data.memberMix.nonMember}</span> new leads</span>
             </div>
           </div>
         </ChartCard>
