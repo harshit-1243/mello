@@ -295,3 +295,30 @@ Pure-stdlib Python lead-gen. Produced **5,684 deduped callable companies** → `
 - Mobile pass; delete stray `main` file in repo root.
 
 *Last updated: 2026-07-01 — SHIPPED purple site live to melloai.in (conversation hero, /about + /contact, Outbound section, motion, gold dashboard, dashboard gated); fixed outbound latency 16s→~1s via gemma-4-31b (kept Sarvam Hinglish) + "agent acts itself" + offer-injection; mid-flight on Namastey Salon marketing call (campaign 6) — NEXT: apply offer context to the picked contact, re-fire.*
+
+---
+
+## Session 2026-07-09 — real-estate reskin (Paradise Group), per-call transcripts + Sales Handoff, outbound agent tuning, Paradise send-package
+
+### Dashboard (mello.ai, `figma-dashboard` — pushed to GitHub)
+- **Full real-estate reskin → Paradise Group** on every page: Enquiries (was Calls), Site Visits (was Bookings — Unit/Tower), Leads (was Members — Stage + Channel partners), **Pipeline Value** (compact ₹Cr/L), RE Reports/Playbook/Settings. Facility row + `config` updated in Supabase; `live.ts` uses a **unit-price map + tower labels** (revenue = sum of unit ticket values); `scripts/seed-supabase-mock.mjs` rewritten for RE data (leads, enquiries, site visits, RE campaigns). Deleted stale sports bookings + TEST call_logs.
+- **Per-call transcript feed:** migration `005_outbound_transcript.sql` (`transcript jsonb` on `outbound_call_attempts` — RUN in Supabase SQL editor); agent syncs transcript; `/api/outbound?resource=calls`; `OutboundView` "Recent calls" with expandable transcript.
+- **Sales Handoff card** per call (intent · interested unit · budget · objections [caller-only] · follow-up + "Push to Salesforce") — rule-based in `outbound.ts` `buildHandoff`, no extra LLM.
+
+### Outbound agent (mello-outbound, `main` — committed this session)
+- Prompt/tools: **numbers-in-English**; **books on a clear yes** (no loop); **answer-only** (no re-pitch, no booking-push after facts); **objection-handling** framework + per-client rebuttals via `context['objections']`; **project FAQ** via `context['faqs']`; **date-capture** (`when` arg on `log_interest`); **emojis removed** (Sarvam TTS errors on emoji-only chunks — was the 🙏 close).
+- **Barge-in:** VAD `start_secs` 0.2→**0.1**. **`retry_timeout_secs`** ended at **5.0** (was 3.5 too low → killed slow replies; 12 too high → 12s dead air). Free tier still stalls sporadically.
+- **LLM = Cerebras `gemma-4-31b` with a NEW key** (old key was quota-throttled → 10–40s stalls). Tested & rejected on Groq: llama-3.3 (Hindi numbers + `<function=>` text leak), gpt-oss-120b (reasoning model → silent on tool-call), kimi-k2 (not on the account). Unused `GROQ_API_KEY` still in `.env`.
+- **Twilio → a second account** (SID starts `ACb8ff8…`, Trial; full SID in `backend/.env`): has **Manan `+919653679703`**, Harshit, Bitu verified; FROM = **`+16088563292`**. (Root cause of the earlier Manan failures: TWO Twilio accounts — Manan was verified on this one, not the old `ACbb08…` that only had Harshit.) `OUTBOUND_TEST_NUMBERS` = both numbers.
+- Demo contacts **43 (Harshit) / 44 (Manan)**, campaign 6 ("New project launch" = Supabase campaign 27): **Paradise Skyline, Sector 12 Kharghar**; short pitch; FAQ (project name/size/location/amenities) + 3 objections; prices 2BHK ₹85L / 3BHK ₹1.4Cr — **all placeholders, swap for real Paradise facts before a client demo.**
+
+### Paradise Group send-package (on Desktop — email SENT by user 2026-07-09)
+- 5 attachments, all fixed to **Harshit Modi · support@melloai.in · +91 83698 51507**, "Mello AI" brand, softened claims: `Mello_Proposal_Paradise_Group (2).docx`, `Mello_MoM_ParadiseGroup_2026-07-06.docx` (attendee **Sanket Chougule, Marketing**), `Mello_Salesforce_Integration.docx`, `Mello Real Estate.pptx.pdf`, demo video. Also produced: `mello essentials/Mello_Outbound_Cost_Sheet_v1.xlsx`, a discovery questionnaire, an objection-handling pitch, and a Titan email signature. Follow-up: WhatsApp Sanket + the Friday call.
+
+### Known open / next
+- **Cerebras free tier stalls sporadically** (~5s capped, was 12s) → **paid LLM tier** is the real fix for a flawless recording.
+- **Backchannel interruptions** — a brief "haan/ji" can cut the agent off; the proper fix is a **min-words interruption threshold** (not yet done).
+- `backend_run.log` is **overwritten on each restart** (`> backend_run.log`) → prior call logs lost; per-call transcripts survive in `backend/call_logs/*.jsonl`.
+- Swap all placeholder facts (Paradise Skyline / Sector 12 / prices / RERA / bank names) for real ones before client-facing use.
+
+*Last updated: 2026-07-09 — real-estate dashboard reskin (Paradise Group) + per-call transcripts + Sales Handoff card; outbound agent tuned (English numbers, objection handling, project FAQ, faster barge-in, emoji-close fix); NEW Cerebras key + NEW Twilio account (Manan verified, dials from ACb8ff8…); Paradise proposal/MoM/deck/video package sent.*
