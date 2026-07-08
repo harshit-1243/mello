@@ -57,6 +57,16 @@ function clockIST(iso: string): string {
   return d.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 }
 
+// One field in the Sales Handoff card.
+function HField({ label, value, gold }: { label: string; value: string; gold?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: GREY }}>{label}</div>
+      <div className="text-sm mt-0.5" style={{ color: gold ? "#F5B544" : "#F3F1FB", fontWeight: 500 }}>{value}</div>
+    </div>
+  );
+}
+
 // One call in the feed — name · time · duration · outcome, expandable to the full transcript.
 function CallRow({ call, open, onToggle }: { call: OutboundCall; open: boolean; onToggle: () => void }) {
   const p = dispoPill(call.disposition, call.answered ? "done" : "no_answer");
@@ -80,6 +90,25 @@ function CallRow({ call, open, onToggle }: { call: OutboundCall; open: boolean; 
       </button>
       {open && hasTx && (
         <div className="pb-4 pl-6 pr-1 flex flex-col gap-2">
+          {call.handoff && (
+            <div className="rounded-xl p-4 mb-2" style={{ background: "#1C1436", border: "1px solid #2A2348" }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] tracking-[0.14em] uppercase" style={{ color: "#A78BFA", fontWeight: 600 }}>⚡ Sales Handoff</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-md" style={{ background: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.25)" }}>↗ Push to Salesforce</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <HField label="Intent" value={call.handoff.intent} />
+                <HField label="Interested in" value={call.handoff.property} />
+                <HField label="Indicative budget" value={call.handoff.budget} gold />
+                <HField label="Objections raised" value={call.handoff.objections.length ? call.handoff.objections.join(" · ") : "None raised"} />
+              </div>
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid #20183C" }}>
+                <div className="text-[10px] uppercase tracking-[0.1em] mb-1" style={{ color: GREY }}>Recommended follow-up</div>
+                <div className="text-sm" style={{ color: "#E9E6F6", lineHeight: 1.5 }}>{call.handoff.followUp}</div>
+              </div>
+            </div>
+          )}
+          <div className="text-[10px] uppercase tracking-[0.1em] mb-1" style={{ color: GREY }}>Transcript</div>
           {call.transcript.map((t, i) => {
             const isAgent = t.role === "assistant";
             return (

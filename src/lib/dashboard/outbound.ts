@@ -72,6 +72,15 @@ export type OutboundContact = {
 
 export type TranscriptTurn = { ts?: string; role: string; text: string };
 
+/** Auto-generated sales-handoff summary for the salesperson taking over the lead. */
+export type Handoff = {
+  intent: string;
+  property: string;
+  budget: string;
+  objections: string[];
+  followUp: string;
+};
+
 export type OutboundCall = {
   id: number;
   name: string | null;
@@ -81,7 +90,80 @@ export type OutboundCall = {
   duration_s: number;
   created_at: string;
   transcript: TranscriptTurn[];
+  handoff: Handoff | null;
 };
+
+/**
+ * Derive a sales-handoff summary from the call — intent, interested property, indicative budget,
+ * objections raised, and a recommended follow-up. Rule-based over the transcript + disposition so
+ * it's instant and reliable (no extra LLM call), mirroring the summary a salesperson needs.
+ */
+function buildHandoff(disposition: string | null, tx: TranscriptTurn[]): Handoff | null {
+  if (!tx || tx.length === 0) return null;
+  const all = tx.map((t) => t.text).join("  ");
+  // Objections/interest must come from the CALLER's words, not Mello's answers (Mello mentions
+  // "home loans", "pre-launch price" etc. as proof — scanning those would be a false positive).
+  const said = tx.filter((t) => t.role !== "assistant").map((t) => t.text).join("  ");
+
+  // Interested property — BHK the caller asked about (fall back to what was discussed).
+  const numMap: Record<string, string> = { one: "1", two: "2", three: "3", four: "4" };
+  const bhkFrom = (s: string): Set<string> => {
+    const out = new Set<string>();
+    const re = /\b(studio|1|2|3|4|one|two|three|four)\s*[- ]?\s*bhk\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(s)) !== null) {
+      const raw = m[1].toLowerCase();
+      out.add(raw === "studio" ? "Studio" : `${numMap[raw] ?? m[1]} BHK`);
+    }
+    return out;
+  };
+  const bhk = bhkFrom(said).size ? bhkFrom(said) : bhkFrom(all);
+  const property = bhk.size ? [...bhk].join(", ") : "—";
+  const priceFor: Record<string, string> = { "2 BHK": "~₹85 L", "3 BHK": "~₹1.4 Cr", "4 BHK": "~₹2.6 Cr", "Studio": "~₹65 L" };
+  const budgets = [...bhk].map((b) => priceFor[b]).filter(Boolean);
+  const budget = budgets.length ? budgets.join(" / ") : "—";
+
+  // Objections raised — genuine concerns the CALLER voiced.
+  const objections: string[] = [];
+  const has = (r: RegExp, label: string) => { if (r.test(said)) objections.push(label); };
+  has(/review|reputation|badnaam|complaint/i, "Reviews / reputation");
+  has(/construction|quality|material|structur/i, "Construction quality");
+  has(/water|paani|पानी/i, "Water supply");
+  has(/mehnga|expensive|costly|zyada|afford|budget se|out of budget/i, "Price too high");
+  has(/delay|late|deri|possession.*(nahi|issue|problem)/i, "Possession / delay");
+
+  // Intent from disposition.
+  const intentMap: Record<string, string> = {
+    confirmed: "Interested — site visit booked",
+    rescheduled: "Interested — visit rescheduled",
+    callback_requested: "Wants a callback",
+    refused: "Not interested (this time)",
+    no_answer: "Not reached",
+    voicemail: "Voicemail — not reached",
+    opt_out: "Do not contact",
+    wrong_number: "Wrong number",
+  };
+  const intent = intentMap[disposition ?? ""] ?? "Enquiry handled";
+
+  // When (for the follow-up line).
+  const whenM = all.match(/\b(this weekend|day after tomorrow|tomorrow|parso|kal|saturday|sunday|monday|tuesday|wednesday|thursday|friday)\b/i);
+  const when = whenM ? whenM[1].toLowerCase() : "";
+
+  // Follow-up recommendation.
+  let followUp: string;
+  if (disposition === "confirmed" || disposition === "rescheduled") {
+    followUp = `Confirm site visit${when ? ` for ${when}` : ""}; send brochure${objections.includes("Water supply") ? " + water-test report" : ""} on WhatsApp; sales rep to call before the visit.`;
+  } else if (disposition === "callback_requested") {
+    followUp = "Call back at the requested time with pricing details.";
+  } else if (disposition === "refused") {
+    followUp = "Nurture — re-engage in 2–4 weeks with new inventory or an offer.";
+  } else {
+    followUp = "Re-attempt the call; share the brochure on WhatsApp.";
+  }
+  if (objections.length && disposition !== "refused") followUp += ` Address concerns: ${objections.join(", ")}.`;
+
+  return { intent, property, budget, objections, followUp };
+}
 
 // ---- FastAPI source (Phase 1) ----
 
@@ -196,15 +278,18 @@ export async function getCampaignCalls(id: number, limit = 25): Promise<Outbound
     return (data ?? []).map((r: Record<string, unknown>) => {
       const contact = (r.outbound_contacts ?? {}) as { name?: string | null; phone?: string };
       const t = r.transcript;
+      const transcript = Array.isArray(t) ? (t as TranscriptTurn[]) : [];
+      const disposition = (r.disposition as string | null) ?? null;
       return {
         id: r.id as number,
         name: contact.name ?? null,
         phone: contact.phone ?? "",
-        disposition: (r.disposition as string | null) ?? null,
+        disposition,
         answered: Boolean(r.answered),
         duration_s: (r.duration_s as number) ?? 0,
         created_at: (r.created_at as string) ?? "",
-        transcript: Array.isArray(t) ? (t as TranscriptTurn[]) : [],
+        transcript,
+        handoff: buildHandoff(disposition, transcript),
       };
     });
   } catch {
