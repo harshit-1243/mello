@@ -322,3 +322,66 @@ Pure-stdlib Python lead-gen. Produced **5,684 deduped callable companies** → `
 - Swap all placeholder facts (Paradise Skyline / Sector 12 / prices / RERA / bank names) for real ones before client-facing use.
 
 *Last updated: 2026-07-09 — real-estate dashboard reskin (Paradise Group) + per-call transcripts + Sales Handoff card; outbound agent tuned (English numbers, objection handling, project FAQ, faster barge-in, emoji-close fix); NEW Cerebras key + NEW Twilio account (Manan verified, dials from ACb8ff8…); Paradise proposal/MoM/deck/video package sent.*
+
+---
+
+## Session 2026-08-07 — ⭐ OUTBOUND AGENT = "Plej" GYM, latency/quality overhaul, WhatsApp, dashboard reskin
+
+**▶▶ THE PRODUCT IS NOW A GYM DEMO for "Plej" (spelled Plej, pronounced "Pledge"), Bandra + Kandivali branches.** Everything below is the current, working state. Both repos pushed: `mello-outbound`→`main` (5101d0d), `mello.ai`→`figma-dashboard` (9fd4ae1).
+
+### The demo call that WORKS (proven, use for the video)
+A real hi-IN call handled 7 turns flawlessly: caller asked (in Hindi) location → gym name → which branch → timings → price → discount → then booked a free trial ("day after tomorrow"). Mello even handled an objection ("मैंने सुना है Plej जिम इतना अच्छा नहीं है" → reassured on certified trainers). Per-turn latency ~0.8–1.3s. **This transcript is seeded into the dashboard Outbound tab.**
+
+### Current outbound agent config (mello-outbound/backend/.env — all local, gitignored)
+- **LLM:** Cerebras `gemma-4-31b`, **PAID key** (`CEREBRAS_API_KEY=csk-kc6ek...` — user bought it, ~$5, fixed the free-tier 429 stalls). `reasoning_effort=low`, `max_completion_tokens=90` (hard cap; prompt targets ~12 words but model can go to ~60).
+- **LLM fallback:** `CerebrasSarvamFallbackLLM` (app/voice/fallback_llm.py) — on Cerebras timeout/error, retries the turn on Sarvam **`sarvam-105b`** (the ONLY non-deprecated Sarvam LLM now; it's a reasoning model → needs `max_tokens=400` or content comes back empty). Toggle `LLM_FALLBACK_SARVAM`.
+- **STT:** Sarvam `saarika:v2.5`, **`SARVAM_STT_LANGUAGE=hi-IN`**. *Critical lesson:* `en-IN` MANGLES Hindi speech into English nonsense ("Viral system", "GHMC Dharam"); `hi-IN` captures Hindi properly. STT is still imperfect (Sarvam's Hinglish weakness) — the durable fix is paid Sarvam or self-hosted **AI4Bharat** (IndicWhisper/Indic-TTS).
+- **TTS:** Sarvam **`bulbul:v3` / voice `ritu`** (clear but ~3.4s synth). A/B'd against `bulbul:v2`/`anushka` (~0.9s, 3.8× faster but rougher pronunciation — user rejected v2's quality). v3 streams (first audio ~0.25s), so it's not 3.4s of dead air. **Fish Audio TTS is integrated** (providers.make_tts "fish" branch, `ormsgpack` installed) but **STAGED OFF** — Fish API returns 402 "insufficient API credit" (their platform credits ≠ API credits; needs a paid top-up at fish.audio/app/developers). `FISH_API_KEY=bd7f4a12...`, `TTS_PROVIDER=sarvam`.
+- **Telephony:** Twilio TRIAL (2nd account `ACb8ff8…`), FROM `+16088563292`, dials ONLY allowlisted verified numbers (`OUTBOUND_TEST_NUMBERS=+918369851507,+919653679703` = Harshit, Manan).
+- **ngrok** reserved domain `village-twine-strangle.ngrok-free.dev` → :8000 (exe on Desktop). Restart it if dead: `ngrok.exe http --domain=village-twine-strangle.ngrok-free.dev 8000`.
+- **Barge-in:** `VADParams(start_secs=0.1, stop_secs=0.5)` — 0.3 clipped short turns into dropped speech (dead air); reverted to 0.1. Turn-stop `SpeechTimeoutUserTurnStopStrategy(0.2)`.
+- **Brand/context:** demo.db Client 1 `business_name="Pledge"` (spelled "Pledge" so TTS pronounces it right — brand is "Plej"). Contacts 43 (Harshit) / 44 (Manan), campaign 6. Context: Bandra HQ + Kandivali branches; monthly ₹2,500 / annual ₹18,000; 6 AM–11 PM (Sun till 2 PM); offer = zero joining fee + 1 month free + 1 PT session + free trial. **All placeholder — swap for real Plej facts before a client-facing demo.**
+
+### This session's key fixes (all committed)
+1. **Keep-warm (main.py `_keep_pipeline_warm`)** — pre-loads Silero + warms Cerebras/Sarvam at boot AND every 4 min. Kills the ~17s cold-start greeting (Silero 3.4s + Sarvam STT websocket connect ~9s + first TTS ~4.2s all happen on the FIRST call after a restart). **Warmth still decays ~10 min idle** → warm fresh right before a demo (fire a few Cerebras pings + a Sarvam GET, then dial).
+2. **Sarvam LLM fallback** (fallback_llm.py) — safety net vs dead air.
+3. **WhatsApp** — `outbox.py` sends via **Meta WhatsApp Cloud API** on a booked/interested outcome, wired into `outbound_pipeline_tools._run` (gated on `decision.fire_confirmation`). See WhatsApp status below.
+4. **Transcript dedup** (call_logger) — the greeting was double-LOGGED (spoken once); now logs once.
+5. **Prompt** (outbound_prompts.py) — feminine Hindi persona (voice is female: "कर रही हूँ" not "रहा हूँ"), numbers-in-English, no-repeat-opening rule, gym-neutral objection/FAQ framing.
+6. **Latency diagnosis** — the paid Cerebras key + warm-up fixed most; the felt lag was mostly (a) cold start and (b) v3 TTS synth time; **STT mangling in en-IN made calls FEEL broken** ("samajh nahi pai") until hi-IN.
+
+### ⚠️ WhatsApp — integration DONE, delivery BLOCKED
+- **Meta app "Mello"** (App ID `1284237110546528`), WhatsApp **Cloud API TEST number** `+1 555-637-1417`, **Phone Number ID `1088201357716959`**, WABA `1619558456622483`. `WHATSAPP_PROVIDER=meta` in .env.
+- Code works: sends fire, Meta returns **200 "accepted"**, token quality GREEN, recipient (Harshit) verified. **But messages never DELIVERED** to the Indian phone.
+- **Root causes found:** (a) the **temp 24h access token EXPIRES** (last check: 401 code 190 "Authentication Error" — the token dies daily, must regenerate on the API Setup page each time); (b) free-form text needs the recipient to first message the test number (open the 24h window — Meta's own note); (c) Meta **TEST numbers are unreliable for real delivery to Indian phones** even when accepted.
+- **THE FIX = production sender:** Meta "Step 2: Production setup" (add own number as sender + business verification, ~2–3 days → permanent system-user token, reliable delivery) OR a BSP (Interakt/AiSensy/Gupshup). Manan (+919653679703) is NOT a verified test recipient (400 "not in allowed list").
+- **For the demo:** the integration is proven — show Mello promising WhatsApp + the dashboard; don't block on the test-number delivery.
+
+### Dashboard (mello.ai `figma-dashboard`) — reskinned Raheja real-estate → Plej gym
+- **Supabase is UNREACHABLE from dev** (`getaddrinfo failed` for `ldzzxktgpmjgklorpigw.supabase.co` — likely the free project auto-PAUSED). So the dashboard runs on the **seed** (`src/lib/dashboard/data.ts`), which we edited: facility = **Plej · Bandra, Mumbai**, "AI Receptionist", sidebar nav Calls/Bookings/Members, Overview KPIs (Calls Today/Bookings/Revenue ₹45k) + gym activity (free trial/PT/membership — no more Badminton/Tennis/courts).
+- **Outbound tab:** new **`OUTBOUND_SOURCE=seed`** branch in `outbound.ts` returns a **"Plej — Membership & Trial Drive"** campaign + the real call transcript (Manan/Harshit/Rahul) + a gym **Sales Handoff** card. Set `OUTBOUND_SOURCE=seed` in `.env.local` (that flag is gitignored — the CODE is committed).
+- Deeper tabs (Calls detail, Bookings, Reports) may still show a few real-estate labels — NOT yet reskinned.
+- Also added `src/app/sitemap.ts` + `robots.ts` (SEO for melloai.in — needs deploy to main + GSC verification).
+
+### How to run (PowerShell)
+```powershell
+# Outbound backend (MUST use .venv python; auto keep-warm at boot)
+cd C:\Users\HARSHIT\OneDrive\Desktop\mello-outbound\backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+# ngrok (other terminal): C:\Users\HARSHIT\OneDrive\Desktop\ngrok.exe http --domain=village-twine-strangle.ngrok-free.dev 8000
+# Dashboard: cd C:\Users\HARSHIT\OneDrive\Desktop\mello.ai ; npm run dev  (:3000/dashboard, OUTBOUND_SOURCE=seed)
+```
+- **Place a call:** `curl -X POST http://localhost:8000/clients/1/test-call -H "Content-Type: application/json" -d '{"to":"+918369851507","campaign_id":6}'` (or Manan +919653679703).
+- **Warm before a demo call:** fire 2–3 Cerebras pings + a GET to api.sarvam.ai, then dial immediately (warmth decays ~10 min).
+- **Watch a call:** `backend_run.log` — `Generating TTS:` = what Mello says; `transcript='...'` = STT capture; per-turn = `User stopped speaking` → `Bot started speaking`. Per-call transcripts in `backend/call_logs/*.jsonl`.
+
+### What's pending / next
+1. **WhatsApp production sender** (the only path to real delivery — test number won't deliver). Regenerate the temp token daily if using the trial.
+2. **Fish Audio A/B** — add API credit at fish.audio/app/developers, then `TTS_PROVIDER=fish` + restart to compare vs Sarvam.
+3. **STT accuracy** — Sarvam Hinglish is the weak link; evaluate paid Sarvam or self-hosted AI4Bharat.
+4. **Swap placeholder Plej facts** (address, real prices, timings) for real ones.
+5. **Reskin deeper dashboard tabs** to gym (Calls/Bookings/Reports still have real-estate labels).
+6. **Record the demo video** (Task 2) — script is written; use the warm hi-IN agent + the Outbound-tab transcript. DoD tasks 1/7/8/13 functionally covered (8 = user's live setup; 13 = WhatsApp blocked on production sender).
+7. **Scripted demo mode** (scripted_demo.py/scripted_llm_wrapper.py) is committed but SHAKY/unused (not a real Pipecat FrameProcessor) — delete or rebuild properly if wanted.
+
+*Last updated: 2026-08-07 — outbound agent is now the Plej GYM demo. Paid Cerebras key (fixed 429 stalls) + Sarvam-105b fallback + keep-warm (kills cold start) + hi-IN STT (fixed Hindi mangling) + v3 TTS + WhatsApp Meta integration (delivery blocked on test-number/expired-token → needs production sender) + Fish TTS staged (no credit). Dashboard reskinned Raheja→Plej with an Outbound seed campaign carrying the real call transcript + gym Sales Handoff. Both repos pushed.*
