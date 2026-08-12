@@ -70,16 +70,16 @@ export async function getOverview(): Promise<Overview> {
   return USE_LIVE ? (await loadOverview(await currentFacilityId())) ?? seedOverview() : seedOverview();
 }
 
-/** Seeded overview — mirrors the demo facility (Raheja Ileseum). */
+/** Seeded overview — mirrors the demo facility (Plej). */
 function seedOverview(): Overview {
   return {
-    facilityName: "Raheja Ileseum",
-    facilityCity: "Mumbai",
+    facilityName: "Plej",
+    facilityCity: "Bandra, Mumbai",
     hoursLabel: "8:00 AM – 12:00 AM",
     live: {
       phone: "+919653679703",
       name: "Manan",
-      detail: "Member · badminton · EN→HI",
+      detail: "Member · trial booking · EN→HI",
       lastLine: "Done Manan — confirmation WhatsApp pe aa raha hai…",
       elapsedSeconds: 42,
     },
@@ -89,19 +89,19 @@ function seedOverview(): Overview {
       answerRatePct: 92,
       bookingsMade: 6,
       bookingsMember: 1,
-      revenueBookedInr: 3600,
+      revenueBookedInr: 45000,
     },
     recentCalls: [
-      { id: "c1", phone: "+919876512345", summary: "Badminton · tomorrow 8 PM", status: "booked", at: iso(-3) },
-      { id: "c2", phone: "+919653679703", summary: "Tennis · today 9 PM · member", status: "booked", at: iso(-12) },
-      { id: "c3", phone: "+919004122000", summary: "Parking question · callback scheduled", status: "handled", at: iso(-26) },
-      { id: "c4", phone: "+918826004111", summary: "Basketball · Sat 6 PM · full court", status: "booked", at: iso(-44) },
+      { id: "c1", phone: "+919876512345", summary: "Free trial · tomorrow 7 AM", status: "booked", at: iso(-3) },
+      { id: "c2", phone: "+919653679703", summary: "Annual membership · member", status: "booked", at: iso(-12) },
+      { id: "c3", phone: "+919004122000", summary: "Timings question · callback scheduled", status: "handled", at: iso(-26) },
+      { id: "c4", phone: "+918826004111", summary: "Personal training · signed up", status: "booked", at: iso(-44) },
       { id: "c5", phone: "+917021588222", summary: "Missed — caller hung up", status: "missed", at: iso(-58) },
     ],
     upcoming: [
-      { id: "b1", when: "8:00 PM", sport: "Badminton", who: "Rahul · non-member · ₹600", court: "Court 2" },
-      { id: "b2", when: "9:00 PM", sport: "Tennis", who: "Manan · member", court: "Court 1" },
-      { id: "b3", when: "Sat 6 PM", sport: "Basketball", who: "Kush · full court · ₹1,600", court: "Full" },
+      { id: "b1", when: "7:00 AM", sport: "Free Trial", who: "Rahul · new lead", court: "Trial" },
+      { id: "b2", when: "6:00 PM", sport: "Personal Training", who: "Manan · member", court: "PT" },
+      { id: "b3", when: "Sat 10 AM", sport: "Gym Tour", who: "Kush · new lead", court: "Tour" },
     ],
   };
 }
@@ -157,7 +157,7 @@ const CALLS: CallDetail[] = [
     status: "booked",
     at: iso(-3),
     transcript: [
-      { role: "mello", text: "Hi! Welcome to Raheja Ileseum — how can I help?" },
+      { role: "mello", text: "Hi! Welcome to Plej — how can I help?" },
       { role: "caller", text: "Kal sham ko badminton court chahiye tha, 8 baje" },
       { role: "mello", text: "Let me check that for you… 8 PM ke do courts booked hain, but 9 PM available hai. Chalega?" },
       { role: "caller", text: "Haan 9 baje theek hai" },
@@ -184,7 +184,7 @@ const CALLS: CallDetail[] = [
     status: "booked",
     at: iso(-12),
     transcript: [
-      { role: "mello", text: "Hi Manan! Welcome to Raheja Ileseum — how can I help?" },
+      { role: "mello", text: "Hi Manan! Welcome to Plej — how can I help?" },
       { role: "caller", text: "Kal 8 baje badminton book karna hai" },
       { role: "mello", text: "Ek sec… kal 8 PM badminton uplabdh nahi hai. 5 PM ya 6 PM chalega?" },
       { role: "caller", text: "5 baje kar do" },
@@ -208,7 +208,7 @@ const CALLS: CallDetail[] = [
     status: "handled",
     at: iso(-26),
     transcript: [
-      { role: "mello", text: "Hi! Welcome to Raheja Ileseum — how can I help?" },
+      { role: "mello", text: "Hi! Welcome to Plej — how can I help?" },
       { role: "caller", text: "Do you have parking at the venue?" },
       { role: "mello", text: "Good question — let me have someone from the team call you back with the details shortly. Is this number okay?" },
       { role: "caller", text: "Yes thanks" },
@@ -227,7 +227,7 @@ const CALLS: CallDetail[] = [
     status: "booked",
     at: iso(-44),
     transcript: [
-      { role: "mello", text: "Hi Kush! Welcome to Raheja Ileseum — how can I help?" },
+      { role: "mello", text: "Hi Kush! Welcome to Plej — how can I help?" },
       { role: "caller", text: "Saturday 6 baje basketball, full court" },
       { role: "mello", text: "Done Kush! Basketball full court, Saturday 6 se 7 PM. Confirmation WhatsApp pe aa raha hai." },
     ],
@@ -247,7 +247,7 @@ const CALLS: CallDetail[] = [
     durationSeconds: 6,
     status: "missed",
     at: iso(-58),
-    transcript: [{ role: "mello", text: "Hi! Welcome to Raheja Ileseum — how can I help?" }],
+    transcript: [{ role: "mello", text: "Hi! Welcome to Plej — how can I help?" }],
     toolCalls: [],
   },
   {
@@ -261,7 +261,7 @@ const CALLS: CallDetail[] = [
     status: "booked",
     at: iso(-92),
     transcript: [
-      { role: "mello", text: "Hi Harshit! Welcome to Raheja Ileseum — how can I help?" },
+      { role: "mello", text: "Hi Harshit! Welcome to Plej — how can I help?" },
       { role: "caller", text: "Tennis tonight at 9?" },
       { role: "mello", text: "Done Harshit! Tennis, today 9 to 10 PM. Confirmation on its way." },
     ],
@@ -373,8 +373,8 @@ export async function getSettings(): Promise<SettingsView> {
 
 function seedSettings(): SettingsView {
   return {
-    facilityName: "Raheja Ileseum",
-    city: "Mumbai",
+    facilityName: "Plej",
+    city: "Bandra, Mumbai",
     hoursLabel: "8:00 AM – 12:00 AM",
     sports: [
       { name: "Badminton", courts: 3, priceLabel: "₹600/hr" },

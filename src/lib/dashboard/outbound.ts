@@ -222,9 +222,82 @@ async function sbAttempts(campaignId: number): Promise<AttemptRow[]> {
   return (data ?? []) as AttemptRow[];
 }
 
+// ---- seed source (demo — a Plej gym campaign carrying a real call + transcript) ----
+
+const SEED_TRANSCRIPT: TranscriptTurn[] = [
+  { role: "assistant", text: "Hi! This is Mello from Plej. We have a special offer on gym membership — would you like to hear about it?" },
+  { role: "user", text: "यह जिम किधर है" },
+  { role: "assistant", text: "Bandra, Mumbai और Kandivali में है। क्या मैं trial book कर दूँ?" },
+  { role: "user", text: "जिम का नाम क्या है" },
+  { role: "assistant", text: "जिम का नाम Plej है।" },
+  { role: "user", text: "टाइमिंग्स क्या है?" },
+  { role: "assistant", text: "Six AM से eleven PM तक, Sunday को two PM तक।" },
+  { role: "user", text: "और प्राइस क्या है?" },
+  { role: "assistant", text: "Monthly two thousand five hundred, annual eighteen thousand rupees." },
+  { role: "user", text: "कुछ डिस्काउंट है" },
+  { role: "assistant", text: "Zero joining fee, one month free and free trial इस हफ्ते है।" },
+  { role: "user", text: "मैंने सुना है Plej जिम इतना अच्छा नहीं है" },
+  { role: "assistant", text: "यह बात सही हो सकती है, पर हमारे certified trainers आपकी मदद करेंगे। क्या आप free trial के लिए आएँगी?" },
+  { role: "user", text: "ठीक है, बुक कर दो — मैं day after tomorrow आऊँगा" },
+  { role: "assistant", text: "Perfect — day after tomorrow के लिए note कर लिया। WhatsApp पर confirm आ जाएगा। Dhanyavaad!" },
+];
+
+const SEED_HANDOFF: Handoff = {
+  intent: "Interested — free trial booked (day after tomorrow)",
+  property: "Annual membership",
+  budget: "₹18,000 / year",
+  objections: ["Heard the gym isn't good — reassured on trainers"],
+  followUp: "Confirm the free trial for day after tomorrow; send location + offer on WhatsApp; front desk to greet on arrival.",
+};
+
+const seedAgo = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+
+const SEED_CAMPAIGN: OutboundCampaign = {
+  id: 1, name: "Plej — Membership & Trial Drive", objective_type: "promo_offer", status: "active",
+  contacts_total: 24, calls_made: 22, answer_rate_pct: 86, booked: 7, spent_inr: 0, budget_cap_inr: 0,
+};
+
+const SEED_METRICS: OutboundMetrics = {
+  campaign_id: 1, name: SEED_CAMPAIGN.name, objective_type: "promo_offer", status: "active",
+  contacts_total: 24, contacts_pending: 2, contacts_done: 20, contacts_exhausted: 2,
+  calls_made: 22, answered: 19, answer_rate_pct: 86, amd_human: 19, amd_voicemail: 2, amd_ivr: 0, amd_unknown: 1,
+  qualified: 19, booked: 7, goal_completed: 7, goal_completion_rate_pct: 29,
+  avg_handle_seconds: 78, total_cost_inr: 0, cost_per_success_inr: null,
+  opt_outs: 1, opt_out_rate_pct: 4, spent_inr: 0, budget_cap_inr: 0,
+};
+
+const SEED_CONTACTS: OutboundContact[] = [
+  { id: 44, name: "Manan", phone: "+919653679703", state: "done", last_disposition: "confirmed", attempt_count: 1 },
+  { id: 43, name: "Harshit", phone: "+918369851507", state: "done", last_disposition: "confirmed", attempt_count: 1 },
+  { id: 42, name: "Rahul", phone: "+919876512345", state: "done", last_disposition: "callback_requested", attempt_count: 1 },
+  { id: 41, name: "Priya", phone: "+918826004111", state: "done", last_disposition: "confirmed", attempt_count: 1 },
+  { id: 40, name: "Amit", phone: "+917021588222", state: "exhausted", last_disposition: "no_answer", attempt_count: 2 },
+];
+
+const SEED_CALLS: OutboundCall[] = [
+  { id: 44, name: "Manan", phone: "+919653679703", disposition: "confirmed", answered: true, duration_s: 95, created_at: seedAgo(6), transcript: SEED_TRANSCRIPT, handoff: SEED_HANDOFF },
+  { id: 43, name: "Harshit", phone: "+918369851507", disposition: "confirmed", answered: true, duration_s: 82, created_at: seedAgo(24),
+    transcript: [
+      { role: "assistant", text: "Hi! This is Mello from Plej. We have a special offer on gym membership — would you like to hear about it?" },
+      { role: "user", text: "प्राइस क्या है इसका?" },
+      { role: "assistant", text: "Monthly two thousand five hundred और annual eighteen thousand है।" },
+      { role: "user", text: "ठीक है बुक कर दो" },
+      { role: "assistant", text: "Perfect — maine aapki interest note kar li. WhatsApp par confirmation aa jaayega. Dhanyavaad!" },
+    ],
+    handoff: { intent: "Interested — free trial booked", property: "Annual membership", budget: "₹18,000 / year", objections: [], followUp: "Confirm trial; send offer on WhatsApp." } },
+  { id: 42, name: "Rahul", phone: "+919876512345", disposition: "callback_requested", answered: true, duration_s: 40, created_at: seedAgo(58),
+    transcript: [
+      { role: "assistant", text: "Hi! This is Mello from Plej. We have a special offer on gym membership — would you like to hear about it?" },
+      { role: "user", text: "अभी busy हूँ, बाद में call करना" },
+      { role: "assistant", text: "बिलकुल, मैं आपको बाद में call कर लूँगी। Dhanyavaad!" },
+    ],
+    handoff: { intent: "Wants a callback", property: "—", budget: "—", objections: [], followUp: "Call back later with the offer details." } },
+];
+
 // ---- public API (source-agnostic) ----
 
 export async function getCampaigns(): Promise<OutboundCampaign[]> {
+  if (SOURCE === "seed") return [SEED_CAMPAIGN];
   if (SOURCE === "supabase") {
     if (!db) return [];
     const { data: camps } = await db.from("outbound_campaigns")
@@ -242,6 +315,7 @@ export async function getCampaigns(): Promise<OutboundCampaign[]> {
 }
 
 export async function getCampaignMetrics(id: number): Promise<OutboundMetrics> {
+  if (SOURCE === "seed") return SEED_METRICS;
   if (SOURCE === "supabase") {
     const { data: c } = await db!.from("outbound_campaigns").select("id, name, objective_type, status, spent_inr, budget_cap_inr").eq("id", id).single();
     const [contacts, attempts] = await Promise.all([sbContacts(id), sbAttempts(id)]);
@@ -251,6 +325,7 @@ export async function getCampaignMetrics(id: number): Promise<OutboundMetrics> {
 }
 
 export async function getCampaignContacts(id: number): Promise<OutboundContact[]> {
+  if (SOURCE === "seed") return SEED_CONTACTS;
   if (SOURCE === "supabase") return sbContacts(id);
   return fastapi<OutboundContact[]>(`/campaigns/${id}/contacts`);
 }
@@ -261,6 +336,7 @@ export async function getCampaignContacts(id: number): Promise<OutboundContact[]
  * isn't there yet (migration 005 not run) or the source is FastAPI, returns [] rather than erroring.
  */
 export async function getCampaignCalls(id: number, limit = 25): Promise<OutboundCall[]> {
+  if (SOURCE === "seed") return SEED_CALLS.slice(0, limit);
   if (SOURCE !== "supabase" || !db) return [];
   try {
     const cols = "id, answered, disposition, duration_s, created_at, outbound_contacts(name, phone)";

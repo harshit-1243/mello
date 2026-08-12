@@ -26,10 +26,10 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { icon: LayoutDashboard, label: "Overview",    href: "/dashboard",          exact: true },
-  { icon: PhoneCall,       label: "Enquiries",   href: "/dashboard/calls"                },
+  { icon: PhoneCall,       label: "Calls",       href: "/dashboard/calls"                },
   { icon: PhoneOutgoing,   label: "Outbound",    href: "/dashboard/outbound"             },
-  { icon: CalendarDays,    label: "Site Visits", href: "/dashboard/bookings"             },
-  { icon: Users,           label: "Leads",       href: "/dashboard/members"              },
+  { icon: CalendarDays,    label: "Bookings",    href: "/dashboard/bookings"             },
+  { icon: Users,           label: "Members",     href: "/dashboard/members"              },
   { icon: BookOpen,        label: "Playbook",    href: "/dashboard/playbook"             },
   { icon: FlaskConical,    label: "Test Mello",  href: "/dashboard/test"                 },
   { icon: BarChart2,       label: "Reports",     href: "/dashboard/reports"              },
@@ -77,7 +77,7 @@ export function Sidebar({
             className="text-[10px] tracking-[0.12em] uppercase"
             style={{ color: "#8C86A8" }}
           >
-            AI Sales Desk
+            AI Receptionist
           </div>
         </div>
       </div>
