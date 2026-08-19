@@ -1,8 +1,0 @@
-# generated data — not source
-leads.db
-exports/
-__pycache__/
-*.pyc
-
-# logs
-*.log
