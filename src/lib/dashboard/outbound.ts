@@ -346,10 +346,14 @@ export async function getCampaignCalls(id: number, limit = 25): Promise<Outbound
       .select(`${cols}, transcript`)
       .eq("campaign_id", id).order("created_at", { ascending: false }).limit(limit);
     if (error) {
-      ({ data, error } = await db.from("outbound_call_attempts")
+      // Same rows minus the transcript column, so the shapes differ by design — widen on the way
+      // back in rather than letting the narrower select fail the build.
+      const retry = await db.from("outbound_call_attempts")
         .select(cols)
-        .eq("campaign_id", id).order("created_at", { ascending: false }).limit(limit));
-      if (error) return [];
+        .eq("campaign_id", id).order("created_at", { ascending: false }).limit(limit);
+      if (retry.error) return [];
+      data = retry.data as typeof data;
+      error = retry.error;
     }
     return (data ?? []).map((r: Record<string, unknown>) => {
       const contact = (r.outbound_contacts ?? {}) as { name?: string | null; phone?: string };
