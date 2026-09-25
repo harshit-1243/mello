@@ -20,18 +20,25 @@ against Postgres 16 loaded with `db/schema.sql`. Run 2026-09-25.
 - `saveBooking` returning `"error"` (transient DB failure) still confirms the booking on the call
   and sends WhatsApp, with no row saved.
 
-## Suggested fix
+## Suggested fix (verified against the same harness)
 
-Store the booking's time range and let Postgres reject overlaps:
+Let Postgres reject *overlapping* ranges on a court, not just identical start times:
 
 ```sql
 create extension if not exists btree_gist;
-alter table bookings add column during tsrange generated always as
-  (tsrange(booking_date + start_time::time, booking_date + end_time::time)) stored;
+-- start_time/end_time are text, and text::time isn't immutable, so wrap it (HH:MM parses deterministically)
+create or replace function booking_range(d date, s text, e text) returns tsrange
+  language sql immutable as $$ select tsrange(d + s::time, d + e::time) $$;
 alter table bookings add constraint bookings_no_overlap
-  exclude using gist (facility_id with =, court_id with =, during with &&)
+  exclude using gist (facility_id with =, court_id with =,
+                      booking_range(booking_date, start_time, end_time) with &&)
   where (status = 'confirmed');
 ```
 
-For full/half basketball, write one row per *physical half* (a full-court booking = two rows,
-`half_a` + `half_b`, inserted together, e.g. via an RPC), so the same constraint covers it.
+With this in place, the harness goes to: identical slot 1/100 ✅, overlapping times 1/2 ✅,
+full-vs-half basketball still 2/2 ❌. Two follow-ups:
+
+- `saveBooking` must also treat **`23P01`** (exclusion_violation) as `"conflict"`, alongside `23505`.
+- Full/half basketball: write one row per *physical half* (a full-court booking = `half_a` +
+  `half_b` rows inserted in one transaction, e.g. via a Supabase RPC) so the same constraint covers
+  it.
